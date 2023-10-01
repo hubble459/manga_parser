@@ -1,0 +1,23 @@
+[package]
+name = "generic_manga_parser"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+chrono = { version = "0", features = ["serde"] }
+config = { version = "0", features = ["yaml", "toml", "json"] }
+serde = { version = "1", features = ["derive"] }
+notify = { version = "6", optional = true }
+kuchiki = { git = "https://github.com/hubble459/kuchiki-pseudos.git" }
+reqwest = { version = "0", features = ["blocking"] }
+thiserror = "1"
+lazy_static = "1"
+regex = "1"
+
+[features]
+default = ["serde", "debug", "watch_dir"]
+serde = []
+debug = []
+watch_dir = ["dep:notify"]
