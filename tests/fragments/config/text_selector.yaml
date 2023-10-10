@@ -1,0 +1,30 @@
+selectors:
+  - h1.title
+
+  - selector: div.summary_image img
+    options:
+      fix_capitalization: true
+      join_with: ' '
+      text_selection:
+        type: attributes
+        attributes:
+          - data-src
+          - src
+      cleanup:
+        - replace_regex: \s\s+
+          replace_with: ' '
+
+  - selector: h1.title
+    options:
+      fix_capitalization: true
+      join_with: ' '
+      text_selection:
+        type: own-text
+
+  - selector: div.content_description
+    options:
+      fix_capitalization: false
+      join_with: ' '
+      text_selection:
+        type: all-text
+        join_with: '\n'

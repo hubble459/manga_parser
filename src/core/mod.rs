@@ -1,2 +1,2 @@
 pub mod config;
-pub mod scraper;
+pub mod scraper_manager;

@@ -7,8 +7,6 @@ use std::{
 use config::{ConfigBuilder, File};
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 
-use crate::CONFIGS;
-
 #[derive(Debug)]
 pub struct ConfigWatcher {
     config_dir: PathBuf,

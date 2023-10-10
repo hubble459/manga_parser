@@ -1,20 +1,37 @@
-title_selector: "div.post-title h1"
-description_selector: "div.summary__content"
-cover_url_selector: "div.summary_image img"
-status_selector: "div.post-status div.summary-content"
-authors_selector: "div.author-content a"
-genres_selector: "div.genres-content a"
-alternative_titles_selector: div.summary-heading:has('h5:icontains("alternative")') + div
+# yaml-language-server: $schema=../.vscode/config.schema.yaml
 
-chapter_external_selectors:
-  - id: script:icontains('mangaid')
-    regex: var mangaID = '(\d+)';
-    url: /ajax-list-chapter?mangaID={id}
+manga:
+  title: div.post-title h1
+  description: div.summary__content
+  cover_url:
+    selector: div.summary_image img
+    value:
+      - data-src
+      - src
 
-chapters_selector: "li.wp-manga-chapter"
-chapter_number_selector: "span.chapter-number"
-chapter_title_selector: "a"
-chapter_date_selector: "span i"
-chapter_href_selector: "a"
+  status: div.post-status div.summary-content
+  authors: div.author-content a
+  genres: div.genres-content a
+  alt_titles: div.summary-heading:has('h5:icontains("alternative")') + div
+
+  chapter:
+    base: li.wp-manga-chapter
+    title: a
+    url: a
+    number: span.chapter-number
+    date: span i
+
+    fetch_external:
+      - id: script:icontains('mangaid')
+        regex: var mangaID = '(\d+)';
+        url: /ajax-list-chapter?mangaID={id}
+
+search:
+  search_url: "{host}/search?q={query}"
+  selectors:
+    base: "li"
+    url: "a"
+    title: "a"
+
 date_formats:
   - "%b-%d-%H:%M"

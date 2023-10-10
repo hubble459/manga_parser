@@ -1,0 +1,142 @@
+$id: config.schema.yaml
+title: Manga Scraper
+description: A manga scraper configuation
+type: object
+required:
+  - manga
+properties:
+  manga:
+    $ref: "#/$defs/manga"
+  search:
+    type: object
+    required:
+      - search_url
+      - selectors
+    properties:
+      search_url:
+        type: string
+        examples:
+          - '"{host}/search?q={query}"'
+      query_format:
+        type: object
+        required:
+          - replace_regex
+          - replace_with
+        properties:
+          replace_regex:
+            type: string
+            description: Replace
+          replace_with:
+            type: string
+            description: Replace what regex matched with this string
+      selectors:
+        type: object
+        required:
+          - base
+          - url
+          - title
+        properties:
+          base:
+            $ref: "#/$defs/selector"
+          url:
+            $ref: "#/$defs/selector"
+          title:
+            $ref: "#/$defs/selector"
+          cover_url:
+            $ref: "#/$defs/selector"
+          posted:
+            $ref: "#/$defs/selector"
+  date_formats:
+    type: array
+    description: Date formats the website uses based on https://docs.rs/chrono/latest/chrono/format/strftime/index.html
+    uniqueItems: true
+    items:
+      type: string
+$defs:
+  manga:
+    description: Scraper queries for a manga homepage
+    type: object
+    required:
+      - title
+      - description
+      - cover_url
+      - status
+      - authors
+      - genres
+      - alt_titles
+      - chapter
+    properties:
+      title:
+        $ref: "#/$defs/selector"
+      description:
+        $ref: "#/$defs/selector"
+      cover_url:
+        $ref: "#/$defs/selector"
+      status:
+        $ref: "#/$defs/selector"
+      authors:
+        $ref: "#/$defs/selector"
+      genres:
+        $ref: "#/$defs/selector"
+      alt_titles:
+        $ref: "#/$defs/selector"
+      chapter:
+        $ref: "#/$defs/chapter"
+  selector:
+    oneOf:
+      - type: object
+        required:
+          - selector
+        properties:
+          selector:
+            type: string
+            description: Query selector
+          value:
+            oneOf:
+              - type: string
+                enum:
+                  - own-text
+                  - all-text
+              - type: array
+                description: attribute
+                items:
+                  type: string
+                  examples:
+                    - data-src
+                    - src
+      - type: string
+        description: Query selector
+  chapter:
+    type: object
+    required:
+      - base
+      - url
+      - title
+    properties:
+      base:
+        $ref: "#/$defs/selector"
+      title:
+        $ref: "#/$defs/selector"
+      number:
+        $ref: "#/$defs/selector"
+      date:
+        $ref: "#/$defs/selector"
+      url:
+        $ref: "#/$defs/selector"
+      fetch_external:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              $ref: "#/$defs/selector"
+            regex:
+              type: string
+              description:
+                Regex should return a group called id which is used in
+                the url
+            url:
+              type: string
+              description:
+                URL where chapters are hosted. Will replace {id} with id
+                found from regex
