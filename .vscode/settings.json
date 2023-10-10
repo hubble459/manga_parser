@@ -1,8 +1,7 @@
 {
     "yaml.schemas": {
         "http://json-schema.org/draft-07/schema#": [
-            "config.schema.yaml",
-            "string_selector.schema.yaml"
-        ]
+            "/**/*.schema.*"
+        ],
     },
 }

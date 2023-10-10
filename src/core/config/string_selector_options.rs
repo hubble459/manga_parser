@@ -12,14 +12,14 @@ pub struct TextSelectorOptions {
     pub fix_capitalization: bool,
     /// Determine how text should be selected
     #[serde(default)]
-    pub text_selection: TextSelection,
+    pub text_selection: StringSelection,
 }
 
 impl Default for TextSelectorOptions {
     fn default() -> Self {
         Self {
             cleanup: vec![],
-            text_selection: TextSelection::default(),
+            text_selection: StringSelection::default(),
             fix_capitalization: false,
         }
     }
@@ -34,13 +34,13 @@ pub struct CleanupOption {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
-pub enum TextSelection {
+pub enum StringSelection {
     AllText { join_with: String },
     OwnText,
     Attributes(Vec<String>),
 }
 
-impl Default for TextSelection {
+impl Default for StringSelection {
     fn default() -> Self {
         Self::AllText {
             join_with: String::from(" "),
@@ -48,7 +48,7 @@ impl Default for TextSelection {
     }
 }
 
-impl<'de> Deserialize<'de> for TextSelection {
+impl<'de> Deserialize<'de> for StringSelection {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -56,7 +56,7 @@ impl<'de> Deserialize<'de> for TextSelection {
         struct Visitor;
 
         impl<'de> serde::de::Visitor<'de> for Visitor {
-            type Value = TextSelection;
+            type Value = StringSelection;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                 formatter.write_str("Text selection object")
@@ -98,9 +98,9 @@ impl<'de> Deserialize<'de> for TextSelection {
                 }
 
                 match text_type.as_deref() {
-                    Some("own-text") => Ok(TextSelection::OwnText),
-                    Some("all-text") => Ok(TextSelection::AllText { join_with: join_with.unwrap_or(" ".to_string()) }),
-                    Some("attributes") => Ok(TextSelection::Attributes(
+                    Some("own-text") => Ok(StringSelection::OwnText),
+                    Some("all-text") => Ok(StringSelection::AllText { join_with: join_with.unwrap_or(" ".to_string()) }),
+                    Some("attributes") => Ok(StringSelection::Attributes(
                         attributes.unwrap_or_default(),
                     )),
                     _ => Err(serde::de::Error::missing_field("type")),

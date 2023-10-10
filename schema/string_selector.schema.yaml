@@ -1,4 +1,6 @@
 $id: string_selector.schema.yaml
+title: String Selector
+description: Select an element and extract their text
 oneOf:
   - type: object
     required:
@@ -31,10 +33,6 @@ oneOf:
             type: boolean
             description: Fix bad capitalization
             default: true
-          join_with:
-            type: string
-            description: When more than one element is found, this determines how should the strings be joined
-            default: "' '"
           text_selection:
             description: Determine how text should be selected
             oneOf:
@@ -52,6 +50,7 @@ oneOf:
                     const: all-text
                   join_with:
                     type: string
+                    description: When more than one element is found, this determines how the strings should be joined
                     default: "' '"
               - type: object
                 required:

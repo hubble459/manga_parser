@@ -1,14 +1,14 @@
 use serde::Deserialize;
 
-use super::text_selector_options::TextSelectorOptions;
+use super::string_selector_options::TextSelectorOptions;
 
 #[cfg_attr(feature = "debug", derive(Debug))]
-pub struct TextSelector {
+pub struct StringSelector {
     pub selector: String,
     pub options: TextSelectorOptions,
 }
 
-impl<'de> Deserialize<'de> for TextSelector {
+impl<'de> Deserialize<'de> for StringSelector {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -16,7 +16,7 @@ impl<'de> Deserialize<'de> for TextSelector {
         struct Visitor;
 
         impl<'de> serde::de::Visitor<'de> for Visitor {
-            type Value = TextSelector;
+            type Value = StringSelector;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                 formatter.write_str("Selector object")
@@ -93,14 +93,14 @@ mod test {
     #[derive(Debug, serde::Deserialize)]
     #[allow(unused)]
     struct TestSelector {
-        selectors: Vec<super::TextSelector>,
+        selectors: Vec<super::StringSelector>,
     }
 
     #[test]
     fn test_selector_deserialization() {
         let selector = ConfigBuilder::<DefaultState>::default()
             .add_source(File::from(Path::new(
-                "tests/fragments/config/text_selector.yaml",
+                "tests/fragments/config/string_selectors.yaml",
             )))
             .build()
             .unwrap()

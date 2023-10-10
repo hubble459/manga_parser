@@ -1,14 +1,14 @@
 use serde::Deserialize;
 
-use super::text_selector_options::TextSelectorOptions;
+use super::array_selector_options::ArraySelectorOptions;
 
 #[cfg_attr(feature = "debug", derive(Debug))]
-pub struct TextSelector {
+pub struct ArraySelector {
     pub selector: String,
-    pub options: TextSelectorOptions,
+    pub options: ArraySelectorOptions,
 }
 
-impl<'de> Deserialize<'de> for TextSelector {
+impl<'de> Deserialize<'de> for ArraySelector {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -16,7 +16,7 @@ impl<'de> Deserialize<'de> for TextSelector {
         struct Visitor;
 
         impl<'de> serde::de::Visitor<'de> for Visitor {
-            type Value = TextSelector;
+            type Value = ArraySelector;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                 formatter.write_str("Selector object")
@@ -28,7 +28,7 @@ impl<'de> Deserialize<'de> for TextSelector {
             {
                 Ok(Self::Value {
                     selector: v.to_string(),
-                    options: TextSelectorOptions::default(),
+                    options: ArraySelectorOptions::default(),
                 })
             }
 
@@ -38,7 +38,7 @@ impl<'de> Deserialize<'de> for TextSelector {
             {
                 Ok(Self::Value {
                     selector: v,
-                    options: TextSelectorOptions::default(),
+                    options: ArraySelectorOptions::default(),
                 })
             }
 
@@ -47,7 +47,7 @@ impl<'de> Deserialize<'de> for TextSelector {
                 A: serde::de::MapAccess<'de>,
             {
                 let mut selector: Option<String> = None;
-                let mut options: Option<TextSelectorOptions> = None;
+                let mut options: Option<ArraySelectorOptions> = None;
 
                 while let Some(key) = map.next_key::<String>()? {
                     match key.as_str() {
@@ -93,14 +93,14 @@ mod test {
     #[derive(Debug, serde::Deserialize)]
     #[allow(unused)]
     struct TestSelector {
-        selectors: Vec<super::TextSelector>,
+        selectors: Vec<super::ArraySelector>,
     }
 
     #[test]
     fn test_selector_deserialization() {
         let selector = ConfigBuilder::<DefaultState>::default()
             .add_source(File::from(Path::new(
-                "tests/fragments/config/text_selector.yaml",
+                "tests/fragments/config/array_selectors.yaml",
             )))
             .build()
             .unwrap()
