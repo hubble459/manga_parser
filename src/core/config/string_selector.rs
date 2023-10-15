@@ -1,11 +1,11 @@
 use serde::Deserialize;
 
-use super::string_selector_options::TextSelectorOptions;
+use super::string_selector_options::StringSelectorOptions;
 
 #[cfg_attr(feature = "debug", derive(Debug))]
 pub struct StringSelector {
     pub selector: String,
-    pub options: TextSelectorOptions,
+    pub options: StringSelectorOptions,
 }
 
 impl<'de> Deserialize<'de> for StringSelector {
@@ -28,7 +28,7 @@ impl<'de> Deserialize<'de> for StringSelector {
             {
                 Ok(Self::Value {
                     selector: v.to_string(),
-                    options: TextSelectorOptions::default(),
+                    options: StringSelectorOptions::default(),
                 })
             }
 
@@ -38,7 +38,7 @@ impl<'de> Deserialize<'de> for StringSelector {
             {
                 Ok(Self::Value {
                     selector: v,
-                    options: TextSelectorOptions::default(),
+                    options: StringSelectorOptions::default(),
                 })
             }
 
@@ -47,7 +47,7 @@ impl<'de> Deserialize<'de> for StringSelector {
                 A: serde::de::MapAccess<'de>,
             {
                 let mut selector: Option<String> = None;
-                let mut options: Option<TextSelectorOptions> = None;
+                let mut options: Option<StringSelectorOptions> = None;
 
                 while let Some(key) = map.next_key::<String>()? {
                     match key.as_str() {

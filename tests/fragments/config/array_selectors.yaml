@@ -5,7 +5,6 @@ selectors:
 
   - selector: div.summary_image img
     options:
-      fix_capitalization: true
       join_with: ' '
       text_selection:
         type: attributes
@@ -19,14 +18,14 @@ selectors:
 
   - selector: h1.title
     options:
-      fix_capitalization: true
+      fix_capitalization: title
       join_with: ' '
       text_selection:
         type: own-text
 
   - selector: div.content_description
     options:
-      fix_capitalization: false
+      fix_capitalization: skip
       join_with: ' '
       text_selection:
         type: all-text

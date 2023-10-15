@@ -8,6 +8,9 @@ pub enum ScrapeError {
     #[error("Reqwest error: {0}")]
     ReqwestError(#[from] reqwest::Error),
 
+    #[error("Reqwest error: {0}")]
+    ReqwestMiddlewareError(#[from] reqwest_middleware::Error),
+
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),
 

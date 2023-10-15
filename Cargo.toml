@@ -1,5 +1,5 @@
 [package]
-name = "generic_manga_parser"
+name = "manga_parser"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,21 +9,28 @@ edition = "2021"
 chrono = { version = "0", features = ["serde"] }
 config = { version = "0", features = ["yaml", "toml", "json"] }
 serde = { version = "1", features = ["derive"] }
+serde_regex = "1"
+regex = "1"
 notify = { version = "6", optional = true }
 kuchiki = { git = "https://github.com/hubble459/kuchiki-pseudos.git" }
 thiserror = "1"
 lazy_static = "1"
-regex = "1"
 log = "0"
 reqwest = { version = "0", features = ["blocking", "json"] }
 http-cache-reqwest = "0"
 reqwest-middleware = "0"
-tokio = "1.33.0"
-futures = "0.3.28"
-serde_regex = "1.1.0"
+tokio = "1"
+futures = "0"
+async-trait = "0"
+itertools = "0"
+convert_case = "0"
 
 [features]
 default = ["serde", "debug", "watch_dir"]
 serde = []
 debug = []
 watch_dir = ["dep:notify"]
+
+[dev-dependencies]
+dotenvy = "0.15.7"
+env_logger = "0.10.0"

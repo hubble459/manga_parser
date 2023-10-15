@@ -30,9 +30,11 @@ oneOf:
                   description: Replace matched parts with this string
                   default: "' '"
           fix_capitalization:
-            type: boolean
             description: Fix bad capitalization
-            default: true
+            default: sentence
+            enum:
+              - title
+              - skip
           text_selection:
             description: Determine how text should be selected
             oneOf:

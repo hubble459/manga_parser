@@ -26,12 +26,13 @@ impl Default for ScraperManager {
     }
 }
 
+#[async_trait::async_trait]
 impl MangaScraper for ScraperManager {
-    fn manga(&self, url: &Url) -> Result<Manga, ScrapeError> {
+    async fn manga(&self, url: &Url) -> Result<Manga, ScrapeError> {
         let mut err = None;
         for scraper in self.scrapers.iter() {
-            if scraper.accepts(url) {
-                let manga = scraper.manga(url);
+            if scraper.accepts(url).await {
+                let manga = scraper.manga(url).await;
                 match manga {
                     Ok(manga) => return Ok(manga),
                     Err(e) => {
@@ -45,11 +46,11 @@ impl MangaScraper for ScraperManager {
         Err(err.unwrap_or(ScrapeError::WebsiteNotSupported(url.to_string())))
     }
 
-    fn chapter_images(&self, chapter_url: &Url) -> Result<Vec<Url>, ScrapeError> {
+    async fn chapter_images(&self, chapter_url: &Url) -> Result<Vec<Url>, ScrapeError> {
         todo!()
     }
 
-    fn accepts(&self, url: &Url) -> bool {
+    async fn accepts(&self, url: &Url) -> bool {
         true
     }
 }

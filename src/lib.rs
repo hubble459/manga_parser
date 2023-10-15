@@ -15,7 +15,7 @@ lazy_static::lazy_static! {
     pub static ref HTTP_CLIENT: ClientWithMiddleware = {
         ClientBuilder::new(Client::new())
             .with(Cache(HttpCache {
-                mode: CacheMode::Default,
+                mode: CacheMode::ForceCache,
                 manager: CACacheManager::default(),
                 options: HttpCacheOptions::default(),
             }))
@@ -31,10 +31,15 @@ mod tests {
 
     #[tokio::test]
     async fn manga() {
+        dotenvy::dotenv().ok();
+        env_logger::builder()
+            .is_test(true)
+            .init();
         let manager = ScraperManager::new();
 
-        let manga =
-            manager.manga(&Url::parse("https://isekaiscan.top/manga/im-sure-its-my-baby").unwrap());
+        let manga = manager
+            .manga(&Url::parse("https:/, &date_formats/isekaiscan.top/manga/moshi-fanren").unwrap())
+            .await;
         println!("manga: {:#?}", manga);
     }
 }

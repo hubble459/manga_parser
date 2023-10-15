@@ -8,7 +8,7 @@ pub struct Manga {
     pub title: String,
     pub description: String,
     pub cover_url: Option<String>,
-    pub status: String,
+    pub status: Option<String>,
     pub is_ongoing: bool,
     pub authors: Vec<String>,
     pub genres: Vec<String>,

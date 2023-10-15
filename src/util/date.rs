@@ -110,7 +110,11 @@ pub fn try_parse_date(date: &str, date_formats: &[String]) -> Option<DateTime<Ut
         let date = &ORDINAL_NUMBER
             .replace_all(&date, |cap: &Captures| cap[1].to_owned())
             .into_owned();
-        for format in date_formats.iter().map(String::as_str).chain(DEFAULT_DATE_FORMATS) {
+        for format in date_formats
+            .iter()
+            .map(String::as_str)
+            .chain(DEFAULT_DATE_FORMATS)
+        {
             let datetime = NaiveDateTime::parse_from_str(date, format);
             if let Ok(date) = datetime {
                 return Some(Utc.from_utc_datetime(&date));
@@ -171,4 +175,103 @@ pub fn try_parse_date(date: &str, date_formats: &[String]) -> Option<DateTime<Ut
 
     // No date detected
     None
+}
+
+#[cfg(test)]
+mod test {
+    use chrono::{Utc, Duration, DateTime, Months};
+
+    #[test]
+    fn date_parse() {
+        dotenvy::dotenv().ok();
+        env_logger::builder()
+            .is_test(true)
+            .init();
+
+        let now = Utc::now();
+
+        let date_formats = vec![];
+
+        let date = crate::util::date::try_parse_date(&now.timestamp_millis().to_string(), &date_formats);
+        compare_without_time(&now, date);
+
+        let date = crate::util::date::try_parse_date("Today", &date_formats);
+        compare_without_time(&now, date);
+
+        let date = crate::util::date::try_parse_date("Hottest", &date_formats);
+        compare_without_time(&now, date);
+
+        let date = crate::util::date::try_parse_date("Yesterday", &date_formats);
+        compare_without_time(&(now - Duration::days(1)), date);
+
+        let date = crate::util::date::try_parse_date("Last week", &date_formats);
+        compare_without_time(&(now - Duration::weeks(1)), date);
+
+        let date =
+            crate::util::date::try_parse_date(&now.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string(), &date_formats);
+        compare_without_time(&now, date);
+
+        let date = crate::util::date::try_parse_date(&now.to_rfc3339(), &date_formats);
+        compare_without_time(&now, date);
+
+        let date =
+            crate::util::date::try_parse_date(&now.format("%Y-%m-%dT%H:%M:%SZ").to_string(), &date_formats);
+        compare_without_time(&now, date);
+
+        let date = crate::util::date::try_parse_date(&now.format("%Y-%m-%dT%H:%M:%S").to_string(), &date_formats);
+        compare_without_time(&now, date);
+
+        let date = crate::util::date::try_parse_date(&now.format("%B %e, %Y").to_string(), &date_formats);
+        compare_without_time(&now, date);
+
+        let date = crate::util::date::try_parse_date(&now.format("%B %e, %Y").to_string(), &date_formats);
+        compare_without_time(&now, date);
+
+        let date = crate::util::date::try_parse_date(&now.format("%erd %B %Y").to_string(), &date_formats);
+        compare_without_time(&now, date);
+
+        let date = crate::util::date::try_parse_date(&now.format("%eth %B %Y").to_string(), &date_formats);
+        compare_without_time(&now, date);
+
+        let date = crate::util::date::try_parse_date(&now.format("%est %B %Y").to_string(), &date_formats);
+        compare_without_time(&now, date);
+
+        let date = crate::util::date::try_parse_date(&now.format("%end %B %Y").to_string(), &date_formats);
+        compare_without_time(&now, date);
+
+        let date = crate::util::date::try_parse_date(&now.format("%B %d %y - %H:%M").to_string(), &date_formats);
+        compare_without_time(&now, date);
+
+        let date = crate::util::date::try_parse_date(&now.format("%B %d %Y - %H:%M").to_string(), &date_formats);
+        compare_without_time(&now, date);
+
+        let date = crate::util::date::try_parse_date(&now.format("%B %d, %Y").to_string(), &date_formats);
+        compare_without_time(&now, date);
+
+        let date = crate::util::date::try_parse_date("about 1 Weeks ago!", &date_formats);
+        compare_without_time(&(now - Duration::weeks(1)), date);
+
+        let date = crate::util::date::try_parse_date("15 Week", &date_formats);
+        compare_without_time(&(now - Duration::weeks(15)), date);
+
+        let date = crate::util::date::try_parse_date("like 2 minutes ago", &date_formats);
+        compare_without_time(&(now - Duration::minutes(2)), date);
+
+        let date = crate::util::date::try_parse_date("Release 2 month ago", &date_formats);
+        compare_without_time(&now.checked_sub_months(Months::new(2)).unwrap(), date);
+
+        let date = crate::util::date::try_parse_date("2 years", &date_formats);
+        compare_without_time(&now.checked_sub_months(Months::new(24)).unwrap(), date);
+
+        let date = crate::util::date::try_parse_date(&now.format("%b %d, %R").to_string(), &date_formats);
+        compare_without_time(&now, date);
+    }
+
+    fn compare_without_time(expected: &DateTime<Utc>, actual: Option<DateTime<Utc>>) {
+        assert_eq!(
+            expected.date_naive(),
+            actual.unwrap().date_naive(),
+            "Dates are not the same"
+        );
+    }
 }

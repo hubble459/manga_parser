@@ -1,7 +1,16 @@
-# yaml-language-server: $schema=../.vscode/config.schema.yaml
+name: madara
+
+accept:
+  selector:
+    - '[href*="madara"]'
+  hostnames:
+    - isekaiscan.top
 
 manga:
-  title: div.post-title h1
+  title:
+    selector: div.post-title h1
+    options:
+      fix_capitalization: title
   description: div.summary__content
   cover_url:
     selector: div.summary_image img
@@ -23,7 +32,7 @@ manga:
 
     fetch_external:
       - id: script:icontains('mangaid')
-        regex: var mangaID = '(\d+)';
+        regex: var mangaID = '(?<id>\d+)';
         url: /ajax-list-chapter?mangaID={id}
 
 search:
