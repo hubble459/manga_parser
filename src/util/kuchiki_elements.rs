@@ -32,21 +32,16 @@ impl ElementsTrait for kuchiki::NodeRef {
     }
 
     fn own_text(&self) -> String {
-        self.descendants()
-            .map(|el| {
-                let mut s = String::new();
-                for text_node in el.children().text_nodes() {
-                    s.push_str(&text_node.borrow());
-                }
-                s
-            })
+        self.children()
+            .text_nodes()
+            .map(|text_node| text_node.borrow().to_string())
             .join("\n")
             .trim()
             .to_string()
     }
 
     fn all_text(&self, join_str: &str) -> String {
-        self.descendants()
+        self.inclusive_descendants()
             .map(|el| el.text_contents())
             .join(join_str)
             .trim()
@@ -64,7 +59,7 @@ impl ElementsTrait for kuchiki::NodeRef {
     }
 
     fn attr(&self, attr: &str) -> Option<String> {
-        let cloned = self.descendants();
+        let cloned = self.inclusive_descendants();
         for node in cloned.into_iter() {
             if let Some(node) = node.as_element() {
                 let attributes = node.attributes.borrow();
@@ -78,7 +73,7 @@ impl ElementsTrait for kuchiki::NodeRef {
     }
 
     fn attrs(&self, attr: &str) -> Vec<String> {
-        let cloned = self.descendants();
+        let cloned = self.inclusive_descendants();
         let mut attrs = vec![];
 
         for node in cloned.into_iter() {
@@ -95,7 +90,7 @@ impl ElementsTrait for kuchiki::NodeRef {
     }
 
     fn attrs_first_of(&self, attrs: &[String]) -> Vec<String> {
-        let cloned = self.descendants();
+        let cloned = self.inclusive_descendants();
         let mut found_attrs = vec![];
 
         for node in cloned.into_iter() {

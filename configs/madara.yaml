@@ -1,9 +1,12 @@
 name: madara
 
 accept:
-  selector:
-    - '[href*="madara"]'
-    - '[content*="Madara"]'
+  selectors:
+    - '[href*=madara]'
+    - '[content*=madara]'
+    - 'script#madara-core-js'
+    - '[src*=madara]'
+    - body.wp-manga-template-default
   hostnames:
     - isekaiscan.top
 
@@ -22,7 +25,9 @@ manga:
           - data-src
           - src
 
-  status: div.post-status div.summary-content
+  status:
+    - div.post-status div + div div.summary-content
+    - div.post-status div.summary-content
   authors: div.author-content a
   genres: div.genres-content a
   alt_titles: div.summary-heading:has('h5:icontains("alternative")') + div
@@ -39,25 +44,42 @@ manga:
             - href
             - src
     number: span.chapter-number
-    date: span i
+    date:
+      - selector: span.chapter-release-date span a
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - title
+      - span i
 
     fetch_external:
       - id: script:icontains('mangaid')
         regex: var mangaID = '(?<id>\d+)';
         url: /ajax-list-chapter?mangaID={id}
-
+      - id:
+          selector: 'link[rel=canonical][href*=mangasushi]'
+          options:
+            text_selection:
+              type: attributes
+              attributes:
+                - href
+        regex: https://mangasushi\.org/manga/(?<id>[^/]+)/
+        url: https://mangasushi.org/manga/{id}/ajax/chapters/
+        method: post
 images:
   image_selector:
-    - selector: p#arraydata
-      options:
-        text_split_regex: ','
-    - selector: img
+    - selector: img.wp-manga-chapter-img
       options:
         text_selection:
           type: attributes
           attributes:
             - data-src
             - src
+        text_split_regex: null
+    - selector: p#arraydata
+      options:
+        text_split_regex: ','
 
 search:
   search_url: "{host}/search?q={query}"
@@ -67,4 +89,5 @@ search:
     title: "a"
 
 date_formats:
+  - "%e %B، %Y"
   - "%b-%d-%H:%M"

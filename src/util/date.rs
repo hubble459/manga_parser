@@ -9,7 +9,7 @@ lazy_static::lazy_static! {
     static ref ORDINAL_NUMBER: Regex = Regex::new(r"(\d)(nd|st|rd|th)").unwrap();
     static ref DIGITS_ONLY: Regex = Regex::new(r"^\d+$").unwrap();
     static ref HAS_DIGITS: Regex = Regex::new(r"\d+").unwrap();
-    static ref NONE_LETTER: Regex = Regex::new(r"\W").unwrap();
+    static ref NON_LETTER: Regex = Regex::new(r"\W").unwrap();
     static ref RELATIVE_DATE: Regex = Regex::new(r"(\d+)\s*(\w\w?)").unwrap();
 }
 
@@ -81,12 +81,22 @@ pub fn try_parse_date(date: &str, date_formats: &[String]) -> Option<DateTime<Ut
 
     // Check if text only
     if !HAS_DIGITS.is_match(date) {
-        let date = NONE_LETTER.replace_all(date, "").to_ascii_lowercase();
+        let date = NON_LETTER.replace_all(date, "").to_ascii_lowercase();
 
         for current_string in STRING_FOR_CURRENT_DATE {
             if date.contains(current_string) {
                 return Some(now);
             }
+        }
+        // TODO 15/10/2023: What if it says "Two years" or "Five months ago"
+        if date.contains("second") {
+            return now.checked_sub_signed(Duration::seconds(1));
+        }
+        if date.contains("minute") {
+            return now.checked_sub_signed(Duration::minutes(1));
+        }
+        if date.contains("hour") {
+            return now.checked_sub_signed(Duration::hours(1));
         }
         if date.contains("yesterday") {
             return now.checked_sub_signed(Duration::days(1));
@@ -105,6 +115,38 @@ pub fn try_parse_date(date: &str, date_formats: &[String]) -> Option<DateTime<Ut
 
     // Check if date format (multiple digits)
     if HAS_DIGITS.find_iter(date).count() > 1 {
+        // Try without cleaning up date string
+        for format in date_formats {
+            let datetime = NaiveDateTime::parse_from_str(date, format);
+            if let Ok(date) = datetime {
+                return Some(Utc.from_utc_datetime(&date));
+            } else if let Err(e) = datetime {
+                if e.kind() == chrono::format::ParseErrorKind::NotEnough {
+                    // Retry with year
+                    let datetime = NaiveDateTime::parse_from_str(
+                        &format!("{date}-{}", now.year()),
+                        &format!("{format}-%Y"),
+                    );
+                    if let Ok(date) = datetime {
+                        return Some(Utc.from_utc_datetime(&date));
+                    } else if let Err(e) = datetime {
+                        // If missing time
+                        if matches!(e.kind(), chrono::format::ParseErrorKind::NotEnough | chrono::format::ParseErrorKind::Impossible) {
+                            // Parse only date
+                            let date = NaiveDate::parse_from_str(date, format);
+                            if let Ok(date) = date {
+                                // Return date time with default time
+                                return Some(
+                                    Utc.from_utc_datetime(&date.and_time(NaiveTime::default())),
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Try with cleaning up date string
         let date = CLEAN_DATE.replace_all(date, "-").into_owned();
         let date = CLEAN_DATE_2.replace_all(&date, "-");
         let date = &ORDINAL_NUMBER
@@ -129,7 +171,7 @@ pub fn try_parse_date(date: &str, date_formats: &[String]) -> Option<DateTime<Ut
                         return Some(Utc.from_utc_datetime(&date));
                     } else if let Err(e) = datetime {
                         // If missing time
-                        if e.kind() == chrono::format::ParseErrorKind::NotEnough {
+                        if matches!(e.kind(), chrono::format::ParseErrorKind::NotEnough | chrono::format::ParseErrorKind::Impossible) {
                             // Parse only date
                             let date = NaiveDate::parse_from_str(date, format);
                             if let Ok(date) = date {

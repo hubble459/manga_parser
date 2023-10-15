@@ -4,12 +4,15 @@ use chrono::{DateTime, Utc};
 use config::{builder::DefaultState, ConfigBuilder, File};
 use convert_case::Casing;
 use kuchiki::{traits::TendrilSink, NodeRef};
-use reqwest::{Method, StatusCode, Url};
+use reqwest::{Body, Method, StatusCode, Url};
 
 use crate::{
     config::{
-        array_selector::ArraySelectors, chapter::FetchExternal, string_selector::StringSelectors,
-        string_selector_options::{StringSelection, self}, MangaScraperConfig,
+        array_selector::ArraySelectors,
+        chapter::FetchExternal,
+        string_selector::StringSelectors,
+        string_selector_options::{self, StringSelection},
+        MangaScraperConfig,
     },
     error::ScrapeError,
     model::{Chapter, Manga},
@@ -111,9 +114,10 @@ impl GenericScraper {
                 }
             };
 
+            // Trim text
+            text = text.trim().to_string();
             if !text.is_empty() {
                 // Cleanup the text
-                text = text.trim().to_string();
                 for cleanup in &selector.options.cleanup {
                     text = cleanup
                         .replace_regex
@@ -128,7 +132,11 @@ impl GenericScraper {
                     string_selector_options::FixCapitalization::Skip => text,
                 };
 
-                return Ok(Some(text));
+                if !text.is_empty() {
+                    return Ok(Some(text));
+                } else {
+                    return Ok(None);
+                }
             }
         }
         Ok(None)
@@ -156,6 +164,8 @@ impl GenericScraper {
                         element.attr_first_of(attrs).unwrap_or_default()
                     }
                 };
+                // Trim text
+                text = text.trim().to_string();
                 // Cleanup the text
                 for cleanup in &selector.options.cleanup {
                     text = cleanup
@@ -207,7 +217,11 @@ impl GenericScraper {
                     info!("[EXT] URL is {}", chapter_url);
                     if let Ok(url) = url.join(&chapter_url) {
                         info!("[EXT] Full URL is {}", chapter_url);
-                        let (chapter_doc, _) = fetch_doc(&url).await?;
+                        let method = match ext_fetch.method.as_str() {
+                            "post" => Method::POST,
+                            _ => Method::GET,
+                        };
+                        let (chapter_doc, _) = fetch_doc_config(&url, method, None::<String>).await?;
                         doc = chapter_doc;
                         break;
                     }
@@ -306,11 +320,14 @@ impl GenericScraper {
         config: &MangaScraperConfig,
         doc: DocWrapper,
     ) -> Result<Vec<Url>, ScrapeError> {
+        debug!("[images] parsing images for {}", url.as_str());
+
         let doc = self
             .fetch_external(&url, doc, &config.images.fetch_external)
             .await?;
 
         let images = self.select_string_array(&config.images.image_selector, doc)?;
+        debug!("[images] found {} images", images.len());
 
         let images = images
             .into_iter()
@@ -319,6 +336,14 @@ impl GenericScraper {
                     .map_err(|e| ScrapeError::NotAValidURL(e.to_string()))
             })
             .collect::<Result<Vec<Url>, ScrapeError>>()?;
+
+        debug!("[images] parsed {} images to URLs", images.len());
+        if log_enabled!(log::Level::Debug) {
+            debug!(
+                "[images] {:?}",
+                images.iter().map(|img| img.as_str()).collect::<Vec<&str>>()
+            );
+        }
 
         Ok(images)
     }
@@ -329,6 +354,8 @@ impl GenericScraper {
         config: &MangaScraperConfig,
         doc: DocWrapper,
     ) -> Result<Manga, ScrapeError> {
+        debug!("[manga] parsing manga at {}", url.as_str());
+
         let status = config.manga.status.as_ref().map_or(Ok(None), |selector| {
             self.select_string(selector, doc.clone())
         })?;
@@ -384,7 +411,6 @@ impl GenericScraper {
 
     fn get_configs_for_url(&self, url: &Url, doc: DocWrapper) -> Vec<&MangaScraperConfig> {
         let hostname = url.host_str().unwrap().to_string();
-
         let mut accepted_configs = vec![];
         for config in self.configs.iter() {
             if config.accept.hostnames.contains(&hostname) {
@@ -397,6 +423,20 @@ impl GenericScraper {
                     }
                 }
             }
+        }
+        if log_enabled!(log::Level::Debug) {
+            debug!(
+                "[config] found {} config(s) for {}",
+                accepted_configs.len(),
+                url.as_str()
+            );
+            debug!(
+                "[config] {:?}",
+                accepted_configs
+                    .iter()
+                    .map(|config| config.name.as_str())
+                    .collect::<Vec<&str>>()
+            );
         }
         accepted_configs
     }
@@ -477,22 +517,30 @@ fn html_to_doc(html: &str) -> Result<DocWrapper, ScrapeError> {
     Ok(DocWrapper(doc))
 }
 
-async fn fetch_doc(url: &Url) -> Result<(DocWrapper, Url), ScrapeError> {
-    let response = HTTP_CLIENT
-        .execute(
-            HTTP_CLIENT
-                .request(Method::GET, url.clone())
-                .header("Referer", url.to_string())
-                .header("Origin", url.to_string())
-                .header(
-                    reqwest::header::USER_AGENT,
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:107.0) Gecko/20100101 Firefox/107.0",
-                )
-                .header("Accept", "*/*")
-                .timeout(Duration::from_secs(5))
-                .build()?,
+async fn fetch_doc_config<T>(
+    url: &Url,
+    method: Method,
+    body: Option<T>,
+) -> Result<(DocWrapper, Url), ScrapeError>
+where
+    T: Into<Body>,
+{
+    let mut request = HTTP_CLIENT
+        .request(method, url.clone())
+        .header("Referer", url.to_string())
+        .header("Origin", url.to_string())
+        .header(
+            reqwest::header::USER_AGENT,
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:107.0) Gecko/20100101 Firefox/107.0",
         )
-        .await?;
+        .header("Accept", "*/*")
+        .timeout(Duration::from_secs(5));
+
+    if let Some(body) = body {
+        request = request.body(body);
+    }
+
+    let response = HTTP_CLIENT.execute(request.build()?).await?;
 
     let response = match response.error_for_status() {
         Ok(response) => response,
@@ -508,4 +556,8 @@ async fn fetch_doc(url: &Url) -> Result<(DocWrapper, Url), ScrapeError> {
     let url = response.url().clone();
     let html = response.text().await?;
     Ok((html_to_doc(&html)?, url))
+}
+
+async fn fetch_doc(url: &Url) -> Result<(DocWrapper, Url), ScrapeError> {
+    fetch_doc_config(url, Method::GET, None::<String>).await
 }

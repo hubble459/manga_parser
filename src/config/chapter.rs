@@ -24,4 +24,10 @@ pub struct FetchExternal {
     #[serde(deserialize_with = "serde_regex::deserialize")]
     pub regex: Regex,
     pub url: String,
+    #[serde(default = "default_method")]
+    pub method: String,
+}
+
+fn default_method() -> String {
+    return String::from("get");
 }

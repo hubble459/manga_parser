@@ -12,7 +12,7 @@ properties:
   accept:
     type: object
     properties:
-      selector:
+      selectors:
         type: array
         items:
           type: string
@@ -98,6 +98,11 @@ $defs:
           description:
             URL where chapters are hosted. Will replace {id} with id
             found from regex
+        method:
+          default: get
+          enum:
+            - get
+            - post
   search:
     type: object
     required:

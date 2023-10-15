@@ -5,7 +5,9 @@ oneOf:
   - type: array
     minItems: 1
     items:
-      $ref: "#/$defs/selector"
+      anyOf:
+        - $ref: "#/$defs/selector"
+        - type: string
   - $ref: "#/$defs/selector"
   - type: string
     description: Query selector
@@ -80,5 +82,5 @@ $defs:
                         - data-src
                         - src
           text_split_regex:
-            type: string
+            type: ['string', 'null']
             description: Should strings be split to become an array
