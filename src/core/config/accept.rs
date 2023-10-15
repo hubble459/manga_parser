@@ -1,7 +1,7 @@
-use regex::Regex;
+
 use serde::Deserialize;
 
-use super::string_selector::StringSelector;
+
 
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(Deserialize)]

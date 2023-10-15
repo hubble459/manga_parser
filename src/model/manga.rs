@@ -4,10 +4,10 @@ use super::Chapter;
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(PartialEq)]
 pub struct Manga {
-    pub url: String,
+    pub url: reqwest::Url,
     pub title: String,
     pub description: String,
-    pub cover_url: Option<String>,
+    pub cover_url: Option<reqwest::Url>,
     pub status: Option<String>,
     pub is_ongoing: bool,
     pub authors: Vec<String>,

@@ -34,11 +34,12 @@ mod tests {
         dotenvy::dotenv().ok();
         env_logger::builder()
             .is_test(true)
-            .init();
+            .try_init()
+            .ok();
         let manager = ScraperManager::new();
 
         let manga = manager
-            .manga(&Url::parse("https:/, &date_formats/isekaiscan.top/manga/moshi-fanren").unwrap())
+            .manga(&Url::parse("https://isekaiscan.top/manga/moshi-fanren").unwrap())
             .await;
         println!("manga: {:#?}", manga);
     }

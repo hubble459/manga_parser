@@ -3,6 +3,7 @@ use serde::Deserialize;
 
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(Deserialize)]
+#[derive(Default)]
 pub struct StringSelectorOptions {
     /// Cleanup text that has been scraped with regexps
     #[serde(default)]
@@ -13,16 +14,6 @@ pub struct StringSelectorOptions {
     /// Determine how text should be selected
     #[serde(default)]
     pub text_selection: StringSelection,
-}
-
-impl Default for StringSelectorOptions {
-    fn default() -> Self {
-        Self {
-            cleanup: vec![],
-            text_selection: StringSelection::default(),
-            fix_capitalization: FixCapitalization::default(),
-        }
-    }
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]

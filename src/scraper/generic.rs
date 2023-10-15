@@ -1,14 +1,14 @@
-use std::{collections::HashMap, ops::Deref, path::Path};
+use std::{collections::HashMap, ops::Deref, path::Path, time::Duration};
 
 use chrono::{DateTime, Utc};
 use config::{builder::DefaultState, ConfigBuilder, File};
 use convert_case::Casing;
 use kuchiki::{traits::TendrilSink, NodeRef};
-use reqwest::{Method, Url};
+use reqwest::{Method, StatusCode, Url};
 
 use crate::{
     core::config::{
-        array_selector::ArraySelector, string_selector::StringSelector,
+        array_selector::ArraySelectors, chapter::FetchExternal, string_selector::StringSelectors,
         string_selector_options::StringSelection, MangaScraperConfig,
     },
     error::ScrapeError,
@@ -51,118 +51,150 @@ impl GenericScraper {
         Ok(Self { configs })
     }
 
+    fn select_required_url(
+        &self,
+        url: &Url,
+        selector: &StringSelectors,
+        doc: DocWrapper,
+    ) -> Result<reqwest::Url, ScrapeError> {
+        self.select_url(url, selector, doc)?
+            .ok_or(ScrapeError::WebScrapingError(format!(
+                "Missing required url with selectors: {:?}",
+                selector.selectors
+            )))
+    }
+
+    fn select_url(
+        &self,
+        url: &Url,
+        selector: &StringSelectors,
+        doc: DocWrapper,
+    ) -> Result<Option<reqwest::Url>, ScrapeError> {
+        let url_string = self.select_string(selector, doc)?;
+        if let Some(url_string) = url_string {
+            Ok(Some(
+                url.join(&url_string)
+                    .map_err(|e| ScrapeError::NotAValidURL(e.to_string()))?,
+            ))
+        } else {
+            Ok(None)
+        }
+    }
+
     fn select_required_string(
         &self,
-        selector: &StringSelector,
+        selector: &StringSelectors,
         doc: DocWrapper,
     ) -> Result<String, ScrapeError> {
         self.select_string(selector, doc)?
             .ok_or(ScrapeError::WebScrapingError(format!(
-                "Missing required field with selector: {}",
-                selector.selector
+                "Missing required field with selectors: {:?}",
+                selector.selectors
             )))
     }
 
     fn select_string(
         &self,
-        selector: &StringSelector,
+        selectors: &StringSelectors,
         doc: DocWrapper,
     ) -> Result<Option<String>, ScrapeError> {
-        let elements = doc
-            .select(&selector.selector)
-            .map_err(|_| ScrapeError::SelectorError(selector.selector.clone()))?;
+        for selector in &selectors.selectors {
+            let elements = doc
+                .select(&selector.selector)
+                .map_err(|_| ScrapeError::SelectorError(selector.selector.clone()))?;
 
-        let mut text = match &selector.options.text_selection {
-            StringSelection::AllText { join_with } => elements.all_text(&join_with),
-            StringSelection::OwnText => elements.own_text(),
-            StringSelection::Attributes(attrs) => {
-                elements.attr_first_of(&attrs).unwrap_or_default()
-            }
-        };
-
-        if text.is_empty() {
-            Ok(None)
-        } else {
-            // Cleanup the text
-            text = text.trim().to_string();
-            for cleanup in &selector.options.cleanup {
-                text = cleanup
-                    .replace_regex
-                    .replace_all(&text, &cleanup.replace_with)
-                    .to_string();
-            }
-            // Fix capitalization
-            text = match &selector.options.fix_capitalization {
-                crate::core::config::string_selector_options::FixCapitalization::Title => {
-                    text.to_case(convert_case::Case::Title)
+            let mut text = match &selector.options.text_selection {
+                StringSelection::AllText { join_with } => elements.all_text(join_with),
+                StringSelection::OwnText => elements.own_text(),
+                StringSelection::Attributes(attrs) => {
+                    elements.attr_first_of(attrs).unwrap_or_default()
                 }
-                crate::core::config::string_selector_options::FixCapitalization::Skip => text,
             };
 
-            Ok(Some(text))
+            if !text.is_empty() {
+                // Cleanup the text
+                text = text.trim().to_string();
+                for cleanup in &selector.options.cleanup {
+                    text = cleanup
+                        .replace_regex
+                        .replace_all(&text, &cleanup.replace_with)
+                        .to_string();
+                }
+                // Fix capitalization
+                text = match &selector.options.fix_capitalization {
+                    crate::core::config::string_selector_options::FixCapitalization::Title => {
+                        text.to_case(convert_case::Case::Title)
+                    }
+                    crate::core::config::string_selector_options::FixCapitalization::Skip => text,
+                };
+
+                return Ok(Some(text));
+            }
         }
+        Ok(None)
     }
 
     fn select_string_array(
         &self,
-        selector: &ArraySelector,
+        selectors: &ArraySelectors,
         doc: DocWrapper,
     ) -> Result<Vec<String>, ScrapeError> {
-        let elements = doc
-            .select(&selector.selector)
-            .map_err(|_| ScrapeError::SelectorError(selector.selector.clone()))?;
+        for selector in &selectors.selectors {
+            let elements = doc
+                .select(&selector.selector)
+                .map_err(|_| ScrapeError::SelectorError(selector.selector.clone()))?;
 
-        let mut items = vec![];
+            let mut items = vec![];
 
-        for element in elements {
-            let element = element.as_node();
+            for element in elements {
+                let element = element.as_node();
 
-            let mut text = match &selector.options.text_selection {
-                StringSelection::AllText { join_with } => element.all_text(&join_with),
-                StringSelection::OwnText => element.own_text(),
-                StringSelection::Attributes(attrs) => {
-                    element.attr_first_of(&attrs).unwrap_or_default()
+                let mut text = match &selector.options.text_selection {
+                    StringSelection::AllText { join_with } => element.all_text(join_with),
+                    StringSelection::OwnText => element.own_text(),
+                    StringSelection::Attributes(attrs) => {
+                        element.attr_first_of(attrs).unwrap_or_default()
+                    }
+                };
+                // Cleanup the text
+                for cleanup in &selector.options.cleanup {
+                    text = cleanup
+                        .replace_regex
+                        .replace_all(&text, &cleanup.replace_with)
+                        .to_string();
                 }
-            };
-            // Cleanup the text
-            for cleanup in &selector.options.cleanup {
-                text = cleanup
-                    .replace_regex
-                    .replace_all(&text, &cleanup.replace_with)
-                    .to_string();
+                // Fix capitalization
+                text = match &selector.options.fix_capitalization {
+                    crate::core::config::string_selector_options::FixCapitalization::Title => {
+                        text.to_case(convert_case::Case::Title)
+                    }
+                    crate::core::config::string_selector_options::FixCapitalization::Skip => text,
+                };
+                if !text.is_empty() {
+                    // Split text
+                    if let Some(split_regex) = &selector.options.text_split_regex {
+                        items.append(&mut split_regex.split(&text).map(String::from).collect());
+                    } else {
+                        items.push(text);
+                    }
+                }
             }
-            // Fix capitalization
-            text = match &selector.options.fix_capitalization {
-                crate::core::config::string_selector_options::FixCapitalization::Title => {
-                    text.to_case(convert_case::Case::Title)
-                }
-                crate::core::config::string_selector_options::FixCapitalization::Skip => text,
-            };
-            if !text.is_empty() {
-                // Split text
-                if let Some(split_regex) = &selector.options.text_split_regex {
-                    items.append(&mut split_regex.split(&text).map(String::from).collect());
-                } else {
-                    items.push(text);
-                }
+
+            if !items.is_empty() {
+                return Ok(items);
             }
         }
 
-        Ok(items)
+        Ok(vec![])
     }
 
-    // Generic parse functions
-    async fn chapters(
+    async fn fetch_external(
         &self,
         url: &Url,
-        config: &MangaScraperConfig,
-        doc: DocWrapper,
-    ) -> Result<Vec<Chapter>, ScrapeError> {
-        let chapter_config = &config.manga.chapter;
-
-        let mut doc = doc;
-
-        for ext_fetch in &chapter_config.fetch_external {
+        mut doc: DocWrapper,
+        fetch_external: &[FetchExternal],
+    ) -> Result<DocWrapper, ScrapeError> {
+        for ext_fetch in fetch_external {
             info!("[EXT] Trying fetch on {}", url.host_str().unwrap());
             let element = self.select_string(&ext_fetch.id, doc.clone()).ok();
             if let Some(Some(text)) = element {
@@ -182,10 +214,36 @@ impl GenericScraper {
                 }
             }
         }
+        Ok(doc)
+    }
 
-        let elements = doc.select(&chapter_config.base.selector).map_err(|_| {
-            ScrapeError::SelectorError("Error in chapter base selector".to_string())
-        })?;
+    // Generic parse functions
+    async fn chapters(
+        &self,
+        url: &Url,
+        config: &MangaScraperConfig,
+        doc: DocWrapper,
+    ) -> Result<Vec<Chapter>, ScrapeError> {
+        let chapter_config = &config.manga.chapter;
+
+        let doc = self
+            .fetch_external(url, doc, &chapter_config.fetch_external)
+            .await?;
+
+        let elements = {
+            let mut elements = None;
+            for selector in &chapter_config.base.selectors {
+                elements = Some(doc.select(&selector.selector).map_err(|_| {
+                    ScrapeError::SelectorError("Error in chapter base selector".to_string())
+                })?);
+                if elements.as_ref().is_some_and(|els| !els.is_empty()) {
+                    break;
+                }
+            }
+            elements.ok_or(ScrapeError::SelectorError(
+                "Error in chapter base selector".to_string(),
+            ))
+        }?;
 
         let mut chapters = vec![];
         let total_chapters = elements.len();
@@ -197,16 +255,16 @@ impl GenericScraper {
             let number_text = chapter_config
                 .number
                 .as_ref()
-                .map(|selector| {
-                    self.select_string(&selector, DocWrapper(element.as_node().clone()))
+                .and_then(|selector| {
+                    self.select_string(selector, DocWrapper(element.as_node().clone()))
                         .ok()
                         .flatten()
                 })
-                .flatten()
                 .unwrap_or_else(|| title.clone());
 
             chapters.push(Chapter {
-                url: self.select_required_string(
+                url: self.select_required_url(
+                    url,
                     &chapter_config.url,
                     DocWrapper(element.as_node().clone()),
                 )?,
@@ -219,7 +277,7 @@ impl GenericScraper {
                     .and_then(|selector| {
                         self.select_date(
                             &config.date_formats,
-                            &selector,
+                            selector,
                             DocWrapper(element.as_node().clone()),
                         )
                         .ok()
@@ -234,12 +292,35 @@ impl GenericScraper {
     fn select_date(
         &self,
         date_formats: &[String],
-        selector: &StringSelector,
+        selector: &StringSelectors,
         doc: DocWrapper,
     ) -> Result<Option<DateTime<Utc>>, ScrapeError> {
-        let text = self.select_required_string(&selector, doc)?;
+        let text = self.select_required_string(selector, doc)?;
 
         Ok(crate::util::date::try_parse_date(&text, date_formats))
+    }
+
+    async fn images(
+        &self,
+        url: Url,
+        config: &MangaScraperConfig,
+        doc: DocWrapper,
+    ) -> Result<Vec<Url>, ScrapeError> {
+        let doc = self
+            .fetch_external(&url, doc, &config.images.fetch_external)
+            .await?;
+
+        let images = self.select_string_array(&config.images.image_selector, doc)?;
+
+        let images = images
+            .into_iter()
+            .map(|url_string| {
+                url.join(&url_string)
+                    .map_err(|e| ScrapeError::NotAValidURL(e.to_string()))
+            })
+            .collect::<Result<Vec<Url>, ScrapeError>>()?;
+
+        Ok(images)
     }
 
     async fn full_manga(
@@ -249,11 +330,11 @@ impl GenericScraper {
         doc: DocWrapper,
     ) -> Result<Manga, ScrapeError> {
         let status = config.manga.status.as_ref().map_or(Ok(None), |selector| {
-            self.select_string(&selector, doc.clone())
+            self.select_string(selector, doc.clone())
         })?;
 
         Ok(Manga {
-            url: url.to_string(),
+            url: url.clone(),
             title: self.select_required_string(&config.manga.title, doc.clone())?,
             description: self.select_required_string(&config.manga.description, doc.clone())?,
             cover_url: config
@@ -261,7 +342,7 @@ impl GenericScraper {
                 .cover_url
                 .as_ref()
                 .map_or(Ok(None), |selector| {
-                    self.select_string(&selector, doc.clone())
+                    self.select_url(&url, selector, doc.clone())
                 })?,
             status: status.clone(),
             is_ongoing: self.manga_status(status),
@@ -270,21 +351,21 @@ impl GenericScraper {
                 .authors
                 .as_ref()
                 .map_or(Ok(vec![]), |selector| {
-                    self.select_string_array(&selector, doc.clone())
+                    self.select_string_array(selector, doc.clone())
                 })?,
             genres: config
                 .manga
                 .genres
                 .as_ref()
                 .map_or(Ok(vec![]), |selector| {
-                    self.select_string_array(&selector, doc.clone())
+                    self.select_string_array(selector, doc.clone())
                 })?,
             alternative_titles: config
                 .manga
                 .alt_titles
                 .as_ref()
                 .map_or(Ok(vec![]), |selector| {
-                    self.select_string_array(&selector, doc.clone())
+                    self.select_string_array(selector, doc.clone())
                 })?,
             chapters: self.chapters(&url, config, doc).await?,
         })
@@ -292,20 +373,16 @@ impl GenericScraper {
 
     fn manga_status(&self, status: Option<String>) -> bool {
         if let Some(status) = status {
-            match status.to_lowercase().as_str() {
-                "ongoing" | "on-going" | "updating" | "live" => true,
-                _ => false,
-            }
+            matches!(
+                status.to_lowercase().as_str(),
+                "ongoing" | "on-going" | "updating" | "live"
+            )
         } else {
             true
         }
     }
-}
 
-#[async_trait::async_trait]
-impl MangaScraper for GenericScraper {
-    async fn manga(&self, url: &Url) -> Result<Manga, ScrapeError> {
-        let (doc, url) = fetch_doc(url).await?;
+    fn get_configs_for_url(&self, url: &Url, doc: DocWrapper) -> Vec<&MangaScraperConfig> {
         let hostname = url.host_str().unwrap().to_string();
 
         let mut accepted_configs = vec![];
@@ -314,13 +391,23 @@ impl MangaScraper for GenericScraper {
                 accepted_configs.push(config);
             } else {
                 for selector in config.accept.selectors.iter() {
-                    if doc.select_first(&selector).is_ok() {
+                    if doc.select_first(selector).is_ok() {
                         accepted_configs.push(config);
                         break;
                     }
                 }
             }
         }
+        accepted_configs
+    }
+}
+
+#[async_trait::async_trait]
+impl MangaScraper for GenericScraper {
+    async fn manga(&self, url: &Url) -> Result<Manga, ScrapeError> {
+        let (doc, url) = fetch_doc(url).await?;
+
+        let accepted_configs = self.get_configs_for_url(&url, doc.clone());
 
         let mut errors = HashMap::<String, ScrapeError>::new();
         for config in accepted_configs {
@@ -332,21 +419,41 @@ impl MangaScraper for GenericScraper {
             };
         }
 
-        println!("{:#?}", errors);
-
-        Err(errors
-            .into_values()
-            .next()
-            .unwrap_or(ScrapeError::WebsiteNotSupported(format!(
+        if errors.is_empty() {
+            let hostname = url.host_str().unwrap().to_string();
+            Err(ScrapeError::WebsiteNotSupported(format!(
                 "No scrapers found for {hostname}"
-            ))))
+            )))
+        } else {
+            Err(ScrapeError::MultipleScrapingErrors(errors))
+        }
     }
 
     async fn chapter_images(&self, chapter_url: &Url) -> Result<Vec<Url>, ScrapeError> {
-        todo!()
+        let (doc, url) = fetch_doc(chapter_url).await?;
+        let accepted_configs = self.get_configs_for_url(&url, doc.clone());
+
+        let mut errors = HashMap::<String, ScrapeError>::new();
+        for config in accepted_configs {
+            match self.images(url.clone(), config, doc.clone()).await {
+                Ok(images) => return Ok(images),
+                Err(e) => {
+                    errors.insert(config.name.clone(), e);
+                }
+            };
+        }
+
+        if errors.is_empty() {
+            let hostname = url.host_str().unwrap().to_string();
+            Err(ScrapeError::WebsiteNotSupported(format!(
+                "No scrapers found for {hostname}"
+            )))
+        } else {
+            Err(ScrapeError::MultipleScrapingErrors(errors))
+        }
     }
 
-    async fn accepts(&self, url: &Url) -> bool {
+    async fn accepts(&self, _url: &Url) -> bool {
         // Assume this parser can parse any website
         true
     }
@@ -377,21 +484,28 @@ async fn fetch_doc(url: &Url) -> Result<(DocWrapper, Url), ScrapeError> {
                 .request(Method::GET, url.clone())
                 .header("Referer", url.to_string())
                 .header("Origin", url.to_string())
+                .header(
+                    reqwest::header::USER_AGENT,
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:107.0) Gecko/20100101 Firefox/107.0",
+                )
+                .header("Accept", "*/*")
+                .timeout(Duration::from_secs(5))
                 .build()?,
         )
         .await?;
 
+    let response = match response.error_for_status() {
+        Ok(response) => response,
+        Err(e) => {
+            if let Some(StatusCode::FORBIDDEN) = e.status() {
+                return Err(ScrapeError::CloudflareIUAM);
+            } else {
+                return Err(e.into());
+            }
+        }
+    };
+
     let url = response.url().clone();
     let html = response.text().await?;
     Ok((html_to_doc(&html)?, url))
-}
-
-#[test]
-fn te() {
-    let url = Url::parse("https://url.com/path1/path2").unwrap();
-    println!("{}", url.to_string());
-    let url = url.join("/input").unwrap();
-    println!("{}", url.to_string());
-    let url = url.join("https://google.com/input").unwrap();
-    println!("{}", url.to_string());
 }

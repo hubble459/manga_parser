@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use self::{accept::Accept, manga::Manga, search::SearchConfig};
+use self::{accept::Accept, manga::Manga, search::SearchConfig, images::Images};
 
 pub mod accept;
 pub mod array_selector;
@@ -8,6 +8,7 @@ pub mod array_selector_options;
 pub mod chapter;
 pub mod manga;
 pub mod search;
+pub mod images;
 pub mod string_selector;
 pub mod string_selector_options;
 
@@ -17,6 +18,7 @@ pub struct MangaScraperConfig {
     pub name: String,
     pub accept: Accept,
     pub manga: Manga,
+    pub images: Images,
     pub search: SearchConfig,
     pub date_formats: Vec<String>,
 }

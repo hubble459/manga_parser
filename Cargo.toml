@@ -34,3 +34,4 @@ watch_dir = ["dep:notify"]
 [dev-dependencies]
 dotenvy = "0.15.7"
 env_logger = "0.10.0"
+paste = "1.0.14"

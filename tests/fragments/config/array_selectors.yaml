@@ -23,10 +23,17 @@ selectors:
       text_selection:
         type: own-text
 
-  - selector: div.content_description
-    options:
-      fix_capitalization: skip
-      join_with: ' '
-      text_selection:
-        type: all-text
-        join_with: '\n'
+  - - selector: div.content_description
+      options:
+        fix_capitalization: skip
+        join_with: ' '
+        text_selection:
+          type: all-text
+          join_with: '\n'
+    - selector: div.content_description
+      options:
+        fix_capitalization: skip
+        join_with: ' '
+        text_selection:
+          type: all-text
+          join_with: '\n'

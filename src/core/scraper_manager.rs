@@ -3,7 +3,7 @@ use reqwest::Url;
 use crate::{
     error::ScrapeError,
     model::Manga,
-    scraper::{self, generic::GenericScraper, MangaScraper},
+    scraper::{generic::GenericScraper, MangaScraper},
 };
 
 pub struct ScraperManager {
@@ -19,9 +19,7 @@ impl ScraperManager {
 impl Default for ScraperManager {
     fn default() -> Self {
         Self {
-            scrapers: vec![
-                Box::new(GenericScraper::new().unwrap()),
-            ],
+            scrapers: vec![Box::new(GenericScraper::new().unwrap())],
         }
     }
 }
@@ -47,10 +45,24 @@ impl MangaScraper for ScraperManager {
     }
 
     async fn chapter_images(&self, chapter_url: &Url) -> Result<Vec<Url>, ScrapeError> {
-        todo!()
+        let mut err = None;
+        for scraper in self.scrapers.iter() {
+            if scraper.accepts(chapter_url).await {
+                let manga = scraper.chapter_images(chapter_url).await;
+                match manga {
+                    Ok(images) => return Ok(images),
+                    Err(e) => {
+                        error!("Error parsing images: {:?}", e);
+                        err = Some(e);
+                    }
+                };
+            }
+        }
+
+        Err(err.unwrap_or(ScrapeError::WebsiteNotSupported(chapter_url.to_string())))
     }
 
-    async fn accepts(&self, url: &Url) -> bool {
+    async fn accepts(&self, _url: &Url) -> bool {
         true
     }
 }

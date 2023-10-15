@@ -1,5 +1,5 @@
-use core::fmt;
-use std::{sync::{PoisonError, MutexGuard}, fmt::Display};
+
+use std::{fmt::Display, collections::HashMap};
 
 use thiserror::Error;
 
@@ -23,11 +23,20 @@ pub enum ScrapeError {
     #[error("Web scraping error: {0}")]
     WebScrapingError(String),
 
+    #[error("URL parsing error: {0}")]
+    NotAValidURL(String),
+
     #[error("Selector error: {0}")]
     SelectorError(String),
 
     #[error("Website is not supported: {0}")]
     WebsiteNotSupported(String),
+
+    #[error("Manga scraping errors: {0:#?}")]
+    MultipleScrapingErrors(HashMap<String, ScrapeError>),
+
+    #[error("Cloudflare I'm Under Attack Mode")]
+    CloudflareIUAM,
 }
 
 impl serde::de::Error for ScrapeError {

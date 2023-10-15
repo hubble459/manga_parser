@@ -13,17 +13,24 @@ properties:
     type: object
     properties:
       selector:
-          type: array
-          items:
-            type: string
+        type: array
+        items:
+          type: string
       hostnames:
-          type: array
-          items:
-            type: string
+        type: array
+        items:
+          type: string
   manga:
     $ref: "#/$defs/manga"
   search:
     $ref: "#/$defs/search"
+  images:
+    type: object
+    properties:
+      image_selector:
+        $ref: array_selector.schema.yaml
+      fetch_external:
+        $ref: "#/$defs/fetch_external"
   date_formats:
     type: array
     description: Date formats the website uses based on https://docs.rs/chrono/latest/chrono/format/strftime/index.html
@@ -73,22 +80,24 @@ $defs:
       url:
         $ref: string_selector.schema.yaml
       fetch_external:
-        type: array
-        items:
-          type: object
-          properties:
-            id:
-              $ref: string_selector.schema.yaml
-            regex:
-              type: string
-              description:
-                Regex should return a group called id which is used in
-                the url
-            url:
-              type: string
-              description:
-                URL where chapters are hosted. Will replace {id} with id
-                found from regex
+        $ref: "#/$defs/fetch_external"
+  fetch_external:
+    type: array
+    items:
+      type: object
+      properties:
+        id:
+          $ref: string_selector.schema.yaml
+        regex:
+          type: string
+          description:
+            Regex should return a group called id which is used in
+            the url
+        url:
+          type: string
+          description:
+            URL where chapters are hosted. Will replace {id} with id
+            found from regex
   search:
     type: object
     required:

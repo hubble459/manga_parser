@@ -7,6 +7,8 @@ use kuchiki::{
 pub trait ElementsTrait {
     fn len(&self) -> usize;
 
+    fn is_empty(&self) -> bool;
+
     fn own_text(&self) -> String;
 
     fn all_text(&self, join_str: &str) -> String;
@@ -23,6 +25,10 @@ pub trait ElementsTrait {
 impl ElementsTrait for kuchiki::NodeRef {
     fn len(&self) -> usize {
         self.descendants().count()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     fn own_text(&self) -> String {
@@ -54,7 +60,7 @@ impl ElementsTrait for kuchiki::NodeRef {
                 return val;
             }
         }
-        return None;
+        None
     }
 
     fn attr(&self, attr: &str) -> Option<String> {
@@ -68,7 +74,7 @@ impl ElementsTrait for kuchiki::NodeRef {
                 }
             }
         }
-        return None;
+        None
     }
 
     fn attrs(&self, attr: &str) -> Vec<String> {
@@ -85,7 +91,7 @@ impl ElementsTrait for kuchiki::NodeRef {
             }
         }
 
-        return attrs;
+        attrs
     }
 
     fn attrs_first_of(&self, attrs: &[String]) -> Vec<String> {
@@ -105,13 +111,17 @@ impl ElementsTrait for kuchiki::NodeRef {
             }
         }
 
-        return found_attrs;
+        found_attrs
     }
 }
 
 impl ElementsTrait for Select<Elements<Descendants>> {
     fn len(&self) -> usize {
         self.clone().count()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     fn own_text(&self) -> String {
@@ -143,7 +153,7 @@ impl ElementsTrait for Select<Elements<Descendants>> {
                 return val;
             }
         }
-        return None;
+        None
     }
 
     fn attr(&self, attr: &str) -> Option<String> {
@@ -155,7 +165,7 @@ impl ElementsTrait for Select<Elements<Descendants>> {
                 return Some(val.to_string());
             }
         }
-        return None;
+        None
     }
 
     fn attrs(&self, attr: &str) -> Vec<String> {
@@ -170,7 +180,7 @@ impl ElementsTrait for Select<Elements<Descendants>> {
             }
         }
 
-        return attrs;
+        attrs
     }
 
     fn attrs_first_of(&self, attrs: &[String]) -> Vec<String> {
@@ -188,6 +198,6 @@ impl ElementsTrait for Select<Elements<Descendants>> {
             }
         }
 
-        return found_attrs;
+        found_attrs
     }
 }

@@ -186,7 +186,8 @@ mod test {
         dotenvy::dotenv().ok();
         env_logger::builder()
             .is_test(true)
-            .init();
+            .try_init()
+            .ok();
 
         let now = Utc::now();
 
