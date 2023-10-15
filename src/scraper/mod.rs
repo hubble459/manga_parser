@@ -5,6 +5,7 @@ use crate::{
 use reqwest::Url;
 
 pub mod generic;
+pub mod scraper_manager;
 
 #[async_trait::async_trait]
 pub trait MangaScraper: Send + Sync {

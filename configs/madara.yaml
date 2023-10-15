@@ -3,6 +3,7 @@ name: madara
 accept:
   selector:
     - '[href*="madara"]'
+    - '[content*="Madara"]'
   hostnames:
     - isekaiscan.top
 

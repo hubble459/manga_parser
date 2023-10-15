@@ -5,7 +5,7 @@ use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 #[macro_use]
 extern crate log;
 
-pub mod core;
+pub mod config;
 pub mod error;
 pub mod model;
 pub mod scraper;
@@ -27,7 +27,7 @@ lazy_static::lazy_static! {
 mod tests {
     use reqwest::Url;
 
-    use crate::{core::scraper_manager::ScraperManager, scraper::MangaScraper};
+    use crate::{scraper::scraper_manager::ScraperManager, scraper::MangaScraper};
 
     #[tokio::test]
     async fn manga() {

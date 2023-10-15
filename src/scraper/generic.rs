@@ -7,9 +7,9 @@ use kuchiki::{traits::TendrilSink, NodeRef};
 use reqwest::{Method, StatusCode, Url};
 
 use crate::{
-    core::config::{
+    config::{
         array_selector::ArraySelectors, chapter::FetchExternal, string_selector::StringSelectors,
-        string_selector_options::StringSelection, MangaScraperConfig,
+        string_selector_options::{StringSelection, self}, MangaScraperConfig,
     },
     error::ScrapeError,
     model::{Chapter, Manga},
@@ -122,10 +122,10 @@ impl GenericScraper {
                 }
                 // Fix capitalization
                 text = match &selector.options.fix_capitalization {
-                    crate::core::config::string_selector_options::FixCapitalization::Title => {
+                    string_selector_options::FixCapitalization::Title => {
                         text.to_case(convert_case::Case::Title)
                     }
-                    crate::core::config::string_selector_options::FixCapitalization::Skip => text,
+                    string_selector_options::FixCapitalization::Skip => text,
                 };
 
                 return Ok(Some(text));
@@ -165,10 +165,10 @@ impl GenericScraper {
                 }
                 // Fix capitalization
                 text = match &selector.options.fix_capitalization {
-                    crate::core::config::string_selector_options::FixCapitalization::Title => {
+                    string_selector_options::FixCapitalization::Title => {
                         text.to_case(convert_case::Case::Title)
                     }
-                    crate::core::config::string_selector_options::FixCapitalization::Skip => text,
+                    string_selector_options::FixCapitalization::Skip => text,
                 };
                 if !text.is_empty() {
                     // Split text

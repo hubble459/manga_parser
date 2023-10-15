@@ -1,5 +1,5 @@
 use manga_parser::{
-    core::scraper_manager::ScraperManager, error::ScrapeError, scraper::MangaScraper, model::Manga,
+    scraper::scraper_manager::ScraperManager, error::ScrapeError, scraper::MangaScraper, model::Manga,
 };
 
 lazy_static::lazy_static! {
@@ -24,6 +24,7 @@ macro_rules! test_manga {
 }
 
 test_manga!(isekaiscan: "https://isekaiscan.top/manga/moshi-fanren");
+test_manga!(isekaiscanmanga: "https://isekaiscanmanga.com/manga/silver-devil-king/");
 
 /// Ignored may be
 /// - genres
