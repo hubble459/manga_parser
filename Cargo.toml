@@ -15,15 +15,20 @@ notify = { version = "6", optional = true }
 kuchiki = { git = "https://github.com/hubble459/kuchiki-pseudos.git" }
 thiserror = "1"
 lazy_static = "1"
-log = "0"
-reqwest = { version = "0", features = ["blocking", "json"] }
-http-cache-reqwest = "0"
-reqwest-middleware = "0"
 tokio = "1"
 futures = "0"
 async-trait = "0"
 itertools = "0"
 convert_case = "0"
+reqwest = { version = "0", features = ["cookies", "json"] }
+http-cache-reqwest = "0"
+reqwest-middleware = "0"
+reqwest-retry = "0"
+fake_user_agent = "0"
+cloudflare-bypasser = { path = "../cloudflare-bypasser" }
+task-local-extensions = "0"
+anyhow = "1"
+log = "0"
 
 [features]
 default = ["serde", "debug", "watch_dir"]
@@ -32,6 +37,5 @@ debug = []
 watch_dir = ["dep:notify"]
 
 [dev-dependencies]
-dotenvy = "0.15.7"
-env_logger = "0.10.0"
-paste = "1.0.14"
+env_logger = "0"
+test-log = { version = "*", features = ["log"] }

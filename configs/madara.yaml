@@ -12,10 +12,17 @@ accept:
 
 manga:
   title:
-    selector: div.post-title h1
-    options:
-      fix_capitalization: title
-  description: div.summary__content
+    - selector: div.post-title h1
+      options:
+        fix_capitalization: title
+    - selector: div#manga-title h1
+      options:
+        text_selection:
+          type: own-text
+        fix_capitalization: title
+  description:
+    - div.summary__content
+    - 'h5:contains(Summary) + div p'
   cover_url:
     selector: div.summary_image img
     options:
@@ -45,27 +52,27 @@ manga:
             - src
     number: span.chapter-number
     date:
-      - selector: span.chapter-release-date span a
+      - span.chapter-release-date i
+      - selector: span.chapter-release-date a
         options:
           text_selection:
             type: attributes
             attributes:
               - title
-      - span i
 
     fetch_external:
       - id: script:icontains('mangaid')
         regex: var mangaID = '(?<id>\d+)';
         url: /ajax-list-chapter?mangaID={id}
       - id:
-          selector: 'link[rel=canonical][href*=mangasushi]'
+          selector: 'link[rel=canonical][href*=mangasushi], link[rel=canonical][href*=manga68]'
           options:
             text_selection:
               type: attributes
               attributes:
                 - href
-        regex: https://mangasushi\.org/manga/(?<id>[^/]+)/
-        url: https://mangasushi.org/manga/{id}/ajax/chapters/
+        regex: /manga/(?<id>[^/]+)/
+        url: https://{host}/manga/{id}/ajax/chapters/
         method: post
 images:
   image_selector:

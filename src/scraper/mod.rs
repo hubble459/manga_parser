@@ -15,7 +15,8 @@ pub trait MangaScraper: Send + Sync {
 }
 
 #[async_trait::async_trait]
-pub trait SearchScraper: Send + Sync {
-    async fn accepts(&self, url: &Url) -> bool;
-    async fn search(&self) -> Result<Vec<SearchManga>, ScrapeError>;
+pub trait MangaSearcher: Send + Sync {
+    async fn accepts(&self, hostname: &str) -> bool;
+    async fn search(&self, query: &str, hostnames: &[String]) -> Result<Vec<SearchManga>, ScrapeError>;
+    fn searchable_hostnames(&self) -> Vec<String>;
 }

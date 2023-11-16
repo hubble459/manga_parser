@@ -225,15 +225,12 @@ mod test {
 
     #[test]
     fn date_parse() {
-        dotenvy::dotenv().ok();
-        env_logger::builder()
-            .is_test(true)
-            .try_init()
-            .ok();
-
         let now = Utc::now();
 
         let date_formats = vec![];
+
+        let date = crate::util::date::try_parse_date(&now.format("%e %B، %Y").to_string(), &["%e %B، %Y".to_string()]);
+        compare_without_time(&now, date);
 
         let date = crate::util::date::try_parse_date(&now.timestamp_millis().to_string(), &date_formats);
         compare_without_time(&now, date);
@@ -299,6 +296,9 @@ mod test {
 
         let date = crate::util::date::try_parse_date("like 2 minutes ago", &date_formats);
         compare_without_time(&(now - Duration::minutes(2)), date);
+
+        let date = crate::util::date::try_parse_date("2 days ago", &date_formats);
+        compare_without_time(&(now - Duration::days(2)), date);
 
         let date = crate::util::date::try_parse_date("Release 2 month ago", &date_formats);
         compare_without_time(&now.checked_sub_months(Months::new(2)).unwrap(), date);

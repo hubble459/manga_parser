@@ -2,9 +2,11 @@ use reqwest::Url;
 
 use crate::{
     error::ScrapeError,
-    model::Manga,
+    model::{Manga, SearchManga},
     scraper::{generic::GenericScraper, MangaScraper},
 };
+
+use super::MangaSearcher;
 
 pub struct ScraperManager {
     scrapers: Vec<Box<dyn MangaScraper>>,
@@ -21,6 +23,25 @@ impl Default for ScraperManager {
         Self {
             scrapers: vec![Box::new(GenericScraper::new().unwrap())],
         }
+    }
+}
+
+#[async_trait::async_trait]
+impl MangaSearcher for ScraperManager {
+    async fn accepts(&self, _hostname: &str) -> bool {
+        true
+    }
+
+    async fn search(
+        &self,
+        query: &str,
+        hostnames: &[String],
+    ) -> Result<Vec<SearchManga>, ScrapeError> {
+        Err(ScrapeError::WebScrapingError(String::from("owo")))
+    }
+
+    fn searchable_hostnames(&self) -> Vec<String> {
+        vec![]
     }
 }
 

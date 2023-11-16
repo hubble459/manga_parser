@@ -1,9 +1,13 @@
 use http_cache_reqwest::{CACacheManager, Cache, CacheMode, HttpCache, HttpCacheOptions};
-use reqwest::Client;
-use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+use reqwest_middleware::{ClientBuilder, ClientWithMiddleware, RequestBuilder};
+use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
+
+use crate::util::cloudflare_bypass_middleware::CloudflareBypassMiddleware;
 
 #[macro_use]
 extern crate log;
+
+pub use reqwest::Url;
 
 pub mod config;
 pub mod error;
@@ -13,36 +17,29 @@ pub mod util;
 
 lazy_static::lazy_static! {
     pub static ref HTTP_CLIENT: ClientWithMiddleware = {
-        ClientBuilder::new(Client::new())
+        // Retry up to 3 times with increasing intervals between attempts.
+        let retry_policy = ExponentialBackoff::builder()
+            .build_with_max_retries(3);
+        ClientBuilder::new(
+            reqwest::ClientBuilder::default()
+                .cookie_store(true)
+                .build()
+                .unwrap()
+        )
             .with(Cache(HttpCache {
                 mode: CacheMode::ForceCache,
                 manager: CACacheManager::default(),
                 options: HttpCacheOptions::default(),
             }))
+            .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+            .with(CloudflareBypassMiddleware)
+            .with_init(|request: RequestBuilder| -> RequestBuilder {
+                request
+                    .header(reqwest::header::USER_AGENT, fake_user_agent::get_rua())
+                    .header(reqwest::header::ACCEPT, "*/*")
+            })
             .build()
     };
-}
-
-#[cfg(test)]
-mod tests {
-    use reqwest::Url;
-
-    use crate::{scraper::scraper_manager::ScraperManager, scraper::MangaScraper};
-
-    #[tokio::test]
-    async fn manga() {
-        dotenvy::dotenv().ok();
-        env_logger::builder()
-            .is_test(true)
-            .try_init()
-            .ok();
-        let manager = ScraperManager::new();
-
-        let manga = manager
-            .manga(&Url::parse("https://isekaiscan.top/manga/moshi-fanren").unwrap())
-            .await;
-        println!("manga: {:#?}", manga);
-    }
 }
 
 // #[cfg(test)]

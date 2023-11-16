@@ -2,7 +2,6 @@ use manga_parser::{
     error::ScrapeError, model::Manga, scraper::scraper_manager::ScraperManager,
     scraper::MangaScraper,
 };
-
 lazy_static::lazy_static! {
     static ref SCRAPER_MANAGER: ScraperManager = ScraperManager::default();
 }
@@ -15,10 +14,10 @@ macro_rules! test_manga_mod {
             $(
                 #[doc = "[`url`]: $url"]
                 #[allow(non_snake_case)]
-                #[tokio::test]
+                #[test_log::test(tokio::test)]
                 $(#[$meta])*
                 async fn $hostname() -> Result<(), $crate::ScrapeError> {
-
+                    std::env::set_var("RUST_LOG", "DEBUG");
                     let ignored = vec![$($($ignore,)*)?];
                     let url = reqwest::Url::parse($url).unwrap();
                     let manga = $crate::SCRAPER_MANAGER.manga(&url).await?;
@@ -32,15 +31,15 @@ macro_rules! test_manga_mod {
     };
 }
 
-#[test]
+#[test_log::test]
 fn t() {
     let date =
         manga_parser::util::date::try_parse_date("18 April، 2022", &vec!["%d %B، %Y".to_string()]);
-    println!("date: {:#?}", date);
+    log::debug!("date: {:?}", date);
 
     let date =
         manga_parser::util::date::try_parse_date("an hour ago", &vec!["%d %B، %Y".to_string()]);
-    println!("date: {:#?}", date);
+    log::debug!("date: {:?}", date);
 }
 
 test_manga_mod! {
@@ -62,15 +61,14 @@ test_manga_mod! {
     _1stkissmangaclub: "https://1stkissmanga.club/manga/outside-the-law/";
     #[ignore = "CloudFlare"]
     _1stkissmanga: "https://1stkissmanga.io/manga/outside-the-law/";
-    #[ignore = "CloudFlare"]
+    // #[ignore = "CloudFlare"]
     s2manga: "https://s2manga.com/manga/under-the-oak-tree/";
     manhwatop: "https://manhwatop.com/manga/magic-emperor/";
     mixedmanga: "https://mixedmanga.com/manga/my-husband-is-an-antisocial-count/";
     manga68: "https://manga68.com/manga/magic-emperor/";
-    mangahz: "https://mangahz.com/read/the-eunuchs-consort-rules-the-world/";
     manhuadex: "https://manhuadex.com/manhua/the-eunuchs-consort-rules-the-world/";
     mangachill: "https://mangachill.net/manga/the-eunuchs-consort-rules-thechbacc/";
-    mangarockteam: "https://mangarockteam.com/manga/above-ten-thousand-people";
+    mangarockteam: "https://mangarockteam.com/manga/academys-undercover-professor/";
     mangazukiteam: "https://mangazukiteam.com/manga/shinjiteita-nakama-tachi-ni-dungeon/";
     azmanhwa: "https://azmanhwa.net/manga/i-have-max-level-luck";
     topmanhua: "https://topmanhua.com/manhua/the-beginning-after-the-end/";

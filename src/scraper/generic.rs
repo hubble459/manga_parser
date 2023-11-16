@@ -110,7 +110,8 @@ impl GenericScraper {
                 StringSelection::AllText { join_with } => elements.all_text(join_with),
                 StringSelection::OwnText => elements.own_text(),
                 StringSelection::Attributes(attrs) => {
-                    elements.attr_first_of(attrs).unwrap_or_default()
+                    let first_attr = elements.attr_first_of(attrs).unwrap_or_default();
+                    first_attr
                 }
             };
 
@@ -183,7 +184,9 @@ impl GenericScraper {
                 if !text.is_empty() {
                     // Split text
                     if let Some(split_regex) = &selector.options.text_split_regex {
-                        items.append(&mut split_regex.split(&text).map(String::from).collect());
+                        let mut parts = split_regex.split(&text).map(String::from).collect();
+                        debug!("Split {text} with {:?}: {:#?}", split_regex, parts);
+                        items.append(&mut parts);
                     } else {
                         items.push(text);
                     }
@@ -205,18 +208,20 @@ impl GenericScraper {
         fetch_external: &[FetchExternal],
     ) -> Result<DocWrapper, ScrapeError> {
         for ext_fetch in fetch_external {
-            info!("[EXT] Trying fetch on {}", url.host_str().unwrap());
+            let hostname = url.host_str().unwrap();
+            debug!("[external] Trying fetch on {}", hostname);
             let element = self.select_string(&ext_fetch.id, doc.clone()).ok();
             if let Some(Some(text)) = element {
-                info!("[EXT] Found {:?}", text);
+                debug!("[external] Found {:?}", text);
                 let id = ext_fetch.regex.captures(&text);
                 if let Some(id) = id.and_then(|id| id.name("id")) {
                     let id = id.as_str();
-                    info!("[EXT] Which is id {}", id);
+                    debug!("[external] Which is id {}", id);
                     let chapter_url = ext_fetch.url.replace("{id}", id);
-                    info!("[EXT] URL is {}", chapter_url);
+                    let chapter_url = chapter_url.replace("{host}", hostname);
+                    debug!("[external] URL is {}", chapter_url);
                     if let Ok(url) = url.join(&chapter_url) {
-                        info!("[EXT] Full URL is {}", chapter_url);
+                        debug!("[external] Full URL is {}", chapter_url);
                         let method = match ext_fetch.method.as_str() {
                             "post" => Method::POST,
                             _ => Method::GET,
@@ -310,7 +315,6 @@ impl GenericScraper {
         doc: DocWrapper,
     ) -> Result<Option<DateTime<Utc>>, ScrapeError> {
         let text = self.select_required_string(selector, doc)?;
-
         Ok(crate::util::date::try_parse_date(&text, date_formats))
     }
 
@@ -338,12 +342,6 @@ impl GenericScraper {
             .collect::<Result<Vec<Url>, ScrapeError>>()?;
 
         debug!("[images] parsed {} images to URLs", images.len());
-        if log_enabled!(log::Level::Debug) {
-            debug!(
-                "[images] {:?}",
-                images.iter().map(|img| img.as_str()).collect::<Vec<&str>>()
-            );
-        }
 
         Ok(images)
     }
@@ -529,11 +527,6 @@ where
         .request(method, url.clone())
         .header("Referer", url.to_string())
         .header("Origin", url.to_string())
-        .header(
-            reqwest::header::USER_AGENT,
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:107.0) Gecko/20100101 Firefox/107.0",
-        )
-        .header("Accept", "*/*")
         .timeout(Duration::from_secs(5));
 
     if let Some(body) = body {

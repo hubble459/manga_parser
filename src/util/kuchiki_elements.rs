@@ -41,7 +41,7 @@ impl ElementsTrait for kuchiki::NodeRef {
     }
 
     fn all_text(&self, join_str: &str) -> String {
-        self.inclusive_descendants()
+        self.descendants()
             .map(|el| el.text_contents())
             .join(join_str)
             .trim()
