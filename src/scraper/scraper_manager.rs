@@ -6,8 +6,6 @@ use crate::{
     scraper::{generic::GenericScraper, MangaScraper},
 };
 
-use super::MangaSearcher;
-
 pub struct ScraperManager {
     scrapers: Vec<Box<dyn MangaScraper>>,
 }
@@ -23,25 +21,6 @@ impl Default for ScraperManager {
         Self {
             scrapers: vec![Box::new(GenericScraper::new().unwrap())],
         }
-    }
-}
-
-#[async_trait::async_trait]
-impl MangaSearcher for ScraperManager {
-    async fn accepts(&self, _hostname: &str) -> bool {
-        true
-    }
-
-    async fn search(
-        &self,
-        query: &str,
-        hostnames: &[String],
-    ) -> Result<Vec<SearchManga>, ScrapeError> {
-        Err(ScrapeError::WebScrapingError(String::from("owo")))
-    }
-
-    fn searchable_hostnames(&self) -> Vec<String> {
-        vec![]
     }
 }
 
@@ -85,5 +64,44 @@ impl MangaScraper for ScraperManager {
 
     async fn accepts(&self, _url: &Url) -> bool {
         true
+    }
+
+    async fn search(
+        &self,
+        query: &str,
+        hostnames: &[String],
+    ) -> Result<Vec<SearchManga>, ScrapeError> {
+        let mut err = None;
+        for hostname in hostnames {
+            for scraper in self.scrapers.iter() {
+                if scraper.search_accepts(&hostname) {
+                    let result = scraper.search(query, &[hostname.to_string()]).await;
+                    match result {
+                        Ok(search_results) => return Ok(search_results),
+                        Err(e) => {
+                            if !matches!(e, ScrapeError::SearchNotSupported(_)) {
+                                error!("Error parsing search: {:?}", e);
+                                err = Some(e);
+                            }
+                        }
+                    };
+                }
+            }
+        }
+
+        Err(err.unwrap_or(ScrapeError::SearchNotSupported(hostnames.to_vec())))
+    }
+
+    fn searchable_hostnames(&self) -> Vec<String> {
+        let mut hostnames = vec![];
+        for scraper in self.scrapers.iter() {
+            hostnames.append(&mut scraper.searchable_hostnames());
+        }
+        hostnames.sort();
+        hostnames
+    }
+
+    fn search_accepts(&self, hostname: &str) -> bool {
+        self.searchable_hostnames().binary_search(&hostname.to_string()).is_ok()
     }
 }

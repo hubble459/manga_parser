@@ -1,15 +1,6 @@
-use regex::Regex;
 use serde::Deserialize;
 
-use super::string_selector::StringSelectors;
-
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[derive(Deserialize)]
-pub struct SearchQueryFormat {
-    #[serde(deserialize_with = "serde_regex::deserialize")]
-    pub replace_regex: Regex,
-    pub replace_with: String,
-}
+use super::{string_selector::StringSelectors, string_selector_options::CleanupOption};
 
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(Deserialize)]
@@ -26,8 +17,10 @@ pub struct SearchSelectors {
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(Deserialize)]
 pub struct SearchConfig {
+    #[serde(default)]
+    pub hostnames: Vec<String>,
     pub search_url: String,
     #[serde(default)]
-    pub query_format: Option<SearchQueryFormat>,
+    pub query_format: Vec<CleanupOption>,
     pub selectors: SearchSelectors,
 }

@@ -135,7 +135,14 @@ impl ElementsTrait for Select<Elements<Descendants>> {
 
     fn all_text(&self, join_str: &str) -> String {
         self.clone()
-            .map(|el| el.text_contents())
+            .map(|el| {
+                let mut s = String::new();
+                for text_node in el.as_node().inclusive_descendants().text_nodes() {
+                    s.push_str(&text_node.borrow());
+                    s.push_str(join_str)
+                }
+                s
+            })
             .join(join_str)
             .trim()
             .to_string()

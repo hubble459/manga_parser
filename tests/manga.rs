@@ -17,7 +17,6 @@ macro_rules! test_manga_mod {
                 #[test_log::test(tokio::test)]
                 $(#[$meta])*
                 async fn $hostname() -> Result<(), $crate::ScrapeError> {
-                    std::env::set_var("RUST_LOG", "DEBUG");
                     let ignored = vec![$($($ignore,)*)?];
                     let url = reqwest::Url::parse($url).unwrap();
                     let manga = $crate::SCRAPER_MANAGER.manga(&url).await?;
@@ -32,14 +31,14 @@ macro_rules! test_manga_mod {
 }
 
 #[test_log::test]
-fn t() {
+fn test_dates() {
     let date =
         manga_parser::util::date::try_parse_date("18 April، 2022", &vec!["%d %B، %Y".to_string()]);
-    log::debug!("date: {:?}", date);
+    log::info!("date: {:?}", date);
 
     let date =
         manga_parser::util::date::try_parse_date("an hour ago", &vec!["%d %B، %Y".to_string()]);
-    log::debug!("date: {:?}", date);
+    log::info!("date: {:?}", date);
 }
 
 test_manga_mod! {
@@ -59,9 +58,9 @@ test_manga_mod! {
     mangasushi: "https://mangasushi.org/manga/shin-no-nakama-janai-to-yuusha-no-party-wo-oidasareta-node-henkyou-de-slow-life-suru-koto-ni-shimashita/";
     mangafoxfull: "https://mangafoxfull.com/manga/magic-emperor/";
     _1stkissmangaclub: "https://1stkissmanga.club/manga/outside-the-law/";
-    #[ignore = "CloudFlare"]
+    #[ignore = "CloudflareIUAM"]
     _1stkissmanga: "https://1stkissmanga.io/manga/outside-the-law/";
-    // #[ignore = "CloudFlare"]
+    // #[ignore = "CloudflareIUAM"]
     s2manga: "https://s2manga.com/manga/under-the-oak-tree/";
     manhwatop: "https://manhwatop.com/manga/magic-emperor/";
     mixedmanga: "https://mixedmanga.com/manga/my-husband-is-an-antisocial-count/";
@@ -127,17 +126,22 @@ async fn assert_manga(manga: Manga, ignore: &[&'static str]) {
         .unwrap();
     assert!(!images.is_empty(), "No images found in chapter");
 
-    // let hostname = util::get_hostname(&manga.url).unwrap();
-    // if CAN_SEARCH.contains(&hostname) {
-    //     let search_results = SCRAPER_MANAGER.search(manga.title.clone(), vec![hostname]).await;
-    //     let search_results = search_results.unwrap();
+    let hostname = manga.url.host_str().expect("Missing hostname in URL");
 
-    //     assert!(!search_results.is_empty(), "No search results");
-    //     let item = search_results
-    //         .into_iter()
-    //         .find(|item| item.title.to_ascii_lowercase() == manga.title.to_ascii_lowercase());
-    //     assert!(item.is_some(), "Could not find manga in search results");
-    //     let item = item.unwrap();
-    //     assert!(item.url.has_host(), "Search url is missing host");
-    // }
+    if SCRAPER_MANAGER.search_accepts(hostname) {
+        let search_results = SCRAPER_MANAGER
+            .search(&manga.title, &[hostname.to_string()])
+            .await;
+        let search_results = search_results.unwrap();
+
+        log::info!("sr: {:?}", search_results);
+
+        assert!(!search_results.is_empty(), "No search results");
+        let item = search_results
+            .into_iter()
+            .find(|item| item.title.to_ascii_lowercase() == manga.title.to_ascii_lowercase());
+        assert!(item.is_some(), "Could not find manga in search results");
+        let item = item.unwrap();
+        assert!(item.url.has_host(), "Search url is missing host");
+    }
 }

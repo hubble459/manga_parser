@@ -19,7 +19,8 @@ pub struct MangaScraperConfig {
     pub accept: Accept,
     pub manga: Manga,
     pub images: Images,
-    pub search: SearchConfig,
+    #[serde(default)]
+    pub search: Vec<SearchConfig>,
     pub date_formats: Vec<String>,
 }
 

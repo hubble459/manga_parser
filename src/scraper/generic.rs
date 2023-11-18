@@ -15,7 +15,7 @@ use crate::{
         MangaScraperConfig,
     },
     error::ScrapeError,
-    model::{Chapter, Manga},
+    model::{Chapter, Manga, MangaBuilder, SearchManga},
     util::kuchiki_elements::ElementsTrait,
     HTTP_CLIENT,
 };
@@ -201,6 +201,106 @@ impl GenericScraper {
         Ok(vec![])
     }
 
+    async fn do_search(
+        &self,
+        config: &MangaScraperConfig,
+        hostname: &str,
+        query: &str,
+    ) -> Result<Vec<SearchManga>, ScrapeError> {
+        let search_config = &config.search;
+        let search_config = search_config
+            .iter()
+            .find(|search| search.hostnames.contains(&hostname.to_string()));
+
+        if search_config.is_none() {
+            return Err(ScrapeError::SearchNotSupported(vec![hostname.to_string()]));
+        }
+        let search_config = search_config.unwrap();
+
+        let mut query = query.to_string();
+        debug!("[SEARCH]: Searching for {query} on {hostname}");
+        for format in &search_config.query_format {
+            query = format
+                .replace_regex
+                .replace_all(&query, &format.replace_with)
+                .to_string();
+        }
+
+        let mut search_url = search_config
+            .search_url
+            .replace("{hostname}", hostname)
+            .replace("{query}", &query);
+        if !search_url.starts_with("http") {
+            search_url = String::from("https://") + &search_url;
+        }
+        let search_url =
+            Url::parse(&search_url).map_err(|e| ScrapeError::NotAValidURL(e.to_string()))?;
+        debug!("[SEARCH]: Search URL is {}", search_url.to_string());
+
+        let (doc, ..) = fetch_doc_config(&search_url, Method::GET, None::<String>).await?;
+
+        let elements = {
+            let mut elements: Option<
+                kuchiki::iter::Select<kuchiki::iter::Elements<kuchiki::iter::Descendants>>,
+            > = None;
+            for selector in &search_config.selectors.base.selectors {
+                elements = Some(doc.select(&selector.selector).map_err(|_| {
+                    ScrapeError::SelectorError("Error in search base selector".to_string())
+                })?);
+                if elements.as_ref().is_some_and(|els| !els.is_empty()) {
+                    break;
+                }
+            }
+            elements.ok_or(ScrapeError::SelectorError(
+                "Error in search base selector".to_string(),
+            ))
+        }?;
+
+        let mut search_results = vec![];
+
+        for element in elements {
+            search_results.push(SearchManga {
+                url: self.select_required_url(
+                    &search_url,
+                    &search_config.selectors.url,
+                    DocWrapper(element.as_node().clone()),
+                )?,
+                title: self.select_required_string(
+                    &search_config.selectors.title,
+                    DocWrapper(element.as_node().clone()),
+                )?,
+                cover_url: search_config
+                    .selectors
+                    .cover_url
+                    .as_ref()
+                    .and_then(|selector| {
+                        self.select_url(
+                            &search_url,
+                            selector,
+                            DocWrapper(element.as_node().clone()),
+                        )
+                        .ok()
+                    })
+                    .flatten(),
+                posted: search_config
+                    .selectors
+                    .posted
+                    .as_ref()
+                    .and_then(|selector| {
+                        self.select_date(
+                            &config.date_formats,
+                            selector,
+                            DocWrapper(element.as_node().clone()),
+                        )
+                        .ok()
+                    })
+                    .flatten(),
+            })
+        }
+
+        Ok(search_results)
+    }
+
     async fn fetch_external(
         &self,
         url: &Url,
@@ -226,7 +326,8 @@ impl GenericScraper {
                             "post" => Method::POST,
                             _ => Method::GET,
                         };
-                        let (chapter_doc, _) = fetch_doc_config(&url, method, None::<String>).await?;
+                        let (chapter_doc, ..) =
+                            fetch_doc_config(&url, method, None::<String>).await?;
                         doc = chapter_doc;
                         break;
                     }
@@ -346,54 +447,85 @@ impl GenericScraper {
         Ok(images)
     }
 
-    async fn full_manga(
+    async fn full_manga<'a>(
         &self,
         url: Url,
         config: &MangaScraperConfig,
         doc: DocWrapper,
-    ) -> Result<Manga, ScrapeError> {
+        manga_builder: &'a mut MangaBuilder,
+    ) -> Result<&'a mut MangaBuilder, ScrapeError> {
         debug!("[manga] parsing manga at {}", url.as_str());
 
-        let status = config.manga.status.as_ref().map_or(Ok(None), |selector| {
-            self.select_string(selector, doc.clone())
-        })?;
-
-        Ok(Manga {
-            url: url.clone(),
-            title: self.select_required_string(&config.manga.title, doc.clone())?,
-            description: self.select_required_string(&config.manga.description, doc.clone())?,
-            cover_url: config
-                .manga
-                .cover_url
-                .as_ref()
-                .map_or(Ok(None), |selector| {
-                    self.select_url(&url, selector, doc.clone())
-                })?,
-            status: status.clone(),
-            is_ongoing: self.manga_status(status),
-            authors: config
+        // Overwriting URL
+        manga_builder.url(url.clone());
+        // Status
+        if !manga_builder.has_status() {
+            if let Some(status) = config.manga.status.as_ref().map_or(Ok(None), |selector| {
+                self.select_string(selector, doc.clone())
+            })? {
+                manga_builder.status(status.clone());
+                manga_builder.is_ongoing(self.manga_status(Some(status)));
+            }
+        }
+        // Title
+        if !manga_builder.has_title() {
+            if let Some(title) = self.select_string(&config.manga.title, doc.clone())? {
+                manga_builder.title(title);
+            }
+        }
+        // Description
+        if !manga_builder.has_description() {
+            if let Some(description) = self.select_string(&config.manga.description, doc.clone())? {
+                manga_builder.description(description);
+            }
+        }
+        // Cover URL
+        if let Some(cover_url) = config
+            .manga
+            .cover_url
+            .as_ref()
+            .map_or(Ok(None), |selector| {
+                self.select_url(&url, selector, doc.clone())
+            })?
+        {
+            manga_builder.cover_url(cover_url);
+        }
+        // Authors
+        manga_builder.authors(
+            config
                 .manga
                 .authors
                 .as_ref()
                 .map_or(Ok(vec![]), |selector| {
                     self.select_string_array(selector, doc.clone())
                 })?,
-            genres: config
+        );
+        // Genres
+        manga_builder.genres(
+            config
                 .manga
                 .genres
                 .as_ref()
                 .map_or(Ok(vec![]), |selector| {
                     self.select_string_array(selector, doc.clone())
                 })?,
-            alternative_titles: config
+        );
+        // Alternative Titles
+        manga_builder.alternative_titles(
+            config
                 .manga
                 .alt_titles
                 .as_ref()
                 .map_or(Ok(vec![]), |selector| {
                     self.select_string_array(selector, doc.clone())
                 })?,
-            chapters: self.chapters(&url, config, doc).await?,
-        })
+        );
+        // Chapters
+        if !manga_builder.has_chapters() {
+            manga_builder.chapters(self.chapters(&url, config, doc).await?);
+        }
+
+        Ok(manga_builder)
     }
 
     fn manga_status(&self, status: Option<String>) -> bool {
@@ -405,6 +537,18 @@ impl GenericScraper {
         } else {
             true
         }
+    }
+
+    fn get_search_configs_for_hostname(&self, hostname: &str) -> Vec<&MangaScraperConfig> {
+        let mut accepted_configs = vec![];
+        for config in self.configs.iter() {
+            for search in config.search.iter() {
+                if search.hostnames.contains(&hostname.to_string()) {
+                    accepted_configs.push(config);
+                }
+            }
+        }
+        accepted_configs
     }
 
     fn get_configs_for_url(&self, url: &Url, doc: DocWrapper) -> Vec<&MangaScraperConfig> {
@@ -448,9 +592,21 @@ impl MangaScraper for GenericScraper {
         let accepted_configs = self.get_configs_for_url(&url, doc.clone());
 
         let mut errors = HashMap::<String, ScrapeError>::new();
+        let mut manga_builder = MangaBuilder::new();
         for config in accepted_configs {
-            match self.full_manga(url.clone(), config, doc.clone()).await {
-                Ok(manga) => return Ok(manga),
+            match self
+                .full_manga(url.clone(), config, doc.clone(), &mut manga_builder)
+                .await
+            {
+                Ok(manga_builder) => match manga_builder.build() {
+                    Ok(manga) => return Ok(manga),
+                    Err(e) => {
+                        errors.insert(
+                            config.name.clone(),
+                            ScrapeError::WebScrapingError(e.to_string()),
+                        );
+                    }
+                },
                 Err(e) => {
                     errors.insert(config.name.clone(), e);
                 }
@@ -494,6 +650,52 @@ impl MangaScraper for GenericScraper {
     async fn accepts(&self, _url: &Url) -> bool {
         // Assume this parser can parse any website
         true
+
+        // Could also use the following to properly check
+        // But would be a waste of a web call...
+        // let (doc, url) = fetch_doc(url).await?;
+        // let accepted_configs = self.get_configs_for_url(&url, doc.clone());
+        // return !accepted_configs.is_empty();
+    }
+
+    async fn search(
+        &self,
+        query: &str,
+        hostnames: &[String],
+    ) -> Result<Vec<SearchManga>, ScrapeError> {
+        let mut err = None;
+        let mut results = vec![];
+        for hostname in hostnames {
+            let accepted_configs = self.get_search_configs_for_hostname(hostname);
+            for config in accepted_configs {
+                match self.do_search(&config, hostname, query).await {
+                    Ok(mut search_manga) => results.append(&mut search_manga),
+                    Err(e) => err = Some(e),
+                };
+            }
+        }
+        if !results.is_empty() {
+            return Ok(results);
+        }
+
+        Err(err.unwrap_or(ScrapeError::SearchNotSupported(hostnames.to_vec())))
+    }
+
+    fn searchable_hostnames(&self) -> Vec<String> {
+        let mut hostnames = vec![];
+        for config in self.configs.iter() {
+            for search in config.search.iter() {
+                hostnames.append(&mut search.hostnames.clone());
+            }
+        }
+        hostnames.sort();
+        hostnames
+    }
+
+    fn search_accepts(&self, hostname: &str) -> bool {
+        self.searchable_hostnames()
+            .binary_search(&hostname.to_string())
+            .is_ok()
     }
 }
 
