@@ -32,6 +32,9 @@ pub enum ScrapeError {
     #[error("Website is not supported: {0}")]
     WebsiteNotSupported(String),
 
+    #[error("Search is not supported: {0:?}")]
+    SearchNotSupported(Vec<String>),
+
     #[error("Manga scraping errors: {0:#?}")]
     MultipleScrapingErrors(HashMap<String, ScrapeError>),
 

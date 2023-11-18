@@ -9,8 +9,3 @@ pub struct SearchManga {
     pub cover_url: Option<reqwest::Url>,
     pub posted: Option<DateTime<Utc>>,
 }
-
-fn test() {
-    SearchManga::builder()
-        .build();
-}

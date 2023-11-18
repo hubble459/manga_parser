@@ -28,8 +28,8 @@ fake_user_agent = "0"
 task-local-extensions = "0"
 anyhow = "1"
 log = "0"
-# simple-builder = { git = "https://github.com/hubble459/simple-builder.git" }
-simple-builder = { path = "../simple-builder" }
+simple-builder = { git = "https://github.com/hubble459/simple-builder.git" }
+# simple-builder = { path = "../simple-builder" }
 
 [features]
 default = ["serde", "debug", "watch_dir"]
