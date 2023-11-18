@@ -10,12 +10,13 @@ use crate::{
     config::{
         array_selector::ArraySelectors,
         chapter::FetchExternal,
+        manga,
         string_selector::StringSelectors,
         string_selector_options::{self, StringSelection},
         MangaScraperConfig,
     },
     error::ScrapeError,
-    model::{Chapter, Manga},
+    model::{Chapter, Manga, MangaBuilder},
     util::kuchiki_elements::ElementsTrait,
     HTTP_CLIENT,
 };
@@ -226,7 +227,8 @@ impl GenericScraper {
                             "post" => Method::POST,
                             _ => Method::GET,
                         };
-                        let (chapter_doc, _) = fetch_doc_config(&url, method, None::<String>).await?;
+                        let (chapter_doc, _) =
+                            fetch_doc_config(&url, method, None::<String>).await?;
                         doc = chapter_doc;
                         break;
                     }
@@ -346,54 +348,74 @@ impl GenericScraper {
         Ok(images)
     }
 
-    async fn full_manga(
+    async fn full_manga<'a>(
         &self,
         url: Url,
         config: &MangaScraperConfig,
         doc: DocWrapper,
-    ) -> Result<Manga, ScrapeError> {
+        manga_builder: &'a mut MangaBuilder,
+    ) -> Result<&'a mut MangaBuilder, ScrapeError> {
         debug!("[manga] parsing manga at {}", url.as_str());
 
-        let status = config.manga.status.as_ref().map_or(Ok(None), |selector| {
-            self.select_string(selector, doc.clone())
-        })?;
-
-        Ok(Manga {
-            url: url.clone(),
-            title: self.select_required_string(&config.manga.title, doc.clone())?,
-            description: self.select_required_string(&config.manga.description, doc.clone())?,
-            cover_url: config
-                .manga
-                .cover_url
-                .as_ref()
-                .map_or(Ok(None), |selector| {
-                    self.select_url(&url, selector, doc.clone())
-                })?,
-            status: status.clone(),
-            is_ongoing: self.manga_status(status),
-            authors: config
+        // Overwriting URL
+        manga_builder.url(url.clone());
+        // Status
+        if !manga_builder.has_status() {
+            if let Some(status) = config.manga.status.as_ref().map_or(Ok(None), |selector| {
+                self.select_string(selector, doc.clone())
+            })? {
+                manga_builder.status(status.clone());
+                manga_builder.is_ongoing(self.manga_status(Some(status)));
+            }
+        }
+        // Title
+        if !manga_builder.has_title() {
+            if let Some(title) = self.select_string(&config.manga.title, doc.clone())? {
+                manga_builder.title(title);
+            }
+        }
+        // Description
+        if !manga_builder.has_description() {
+            if let Some(description) = self.select_string(&config.manga.description, doc.clone())? {
+                manga_builder.description(description);
+            }
+        }
+        // Authors
+        manga_builder.authors(
+            config
                 .manga
                 .authors
                 .as_ref()
                 .map_or(Ok(vec![]), |selector| {
                     self.select_string_array(selector, doc.clone())
                 })?,
-            genres: config
+        );
+        // Genres
+        manga_builder.genres(
+            config
                 .manga
                 .genres
                 .as_ref()
                 .map_or(Ok(vec![]), |selector| {
                     self.select_string_array(selector, doc.clone())
                 })?,
-            alternative_titles: config
+        );
+        // Alternative Titles
+        manga_builder.alternative_titles(
+            config
                 .manga
                 .alt_titles
                 .as_ref()
                 .map_or(Ok(vec![]), |selector| {
                     self.select_string_array(selector, doc.clone())
                 })?,
-            chapters: self.chapters(&url, config, doc).await?,
-        })
+        );
+        // Chapters
+        if !manga_builder.has_chapters() {
+            manga_builder.chapters(self.chapters(&url, config, doc).await?);
+        }
+
+        Ok(manga_builder)
     }
 
     fn manga_status(&self, status: Option<String>) -> bool {
@@ -448,9 +470,21 @@ impl MangaScraper for GenericScraper {
         let accepted_configs = self.get_configs_for_url(&url, doc.clone());
 
         let mut errors = HashMap::<String, ScrapeError>::new();
+        let mut manga_builder = MangaBuilder::new();
         for config in accepted_configs {
-            match self.full_manga(url.clone(), config, doc.clone()).await {
-                Ok(manga) => return Ok(manga),
+            match self
+                .full_manga(url.clone(), config, doc.clone(), &mut manga_builder)
+                .await
+            {
+                Ok(manga_builder) => match manga_builder.build() {
+                    Ok(manga) => return Ok(manga),
+                    Err(e) => {
+                        errors.insert(
+                            config.name.clone(),
+                            ScrapeError::WebScrapingError(e.to_string()),
+                        );
+                    }
+                },
                 Err(e) => {
                     errors.insert(config.name.clone(), e);
                 }

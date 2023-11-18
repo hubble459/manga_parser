@@ -2,8 +2,6 @@ use http_cache_reqwest::{CACacheManager, Cache, CacheMode, HttpCache, HttpCacheO
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware, RequestBuilder};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 
-use crate::util::cloudflare_bypass_middleware::CloudflareBypassMiddleware;
-
 #[macro_use]
 extern crate log;
 
@@ -32,7 +30,6 @@ lazy_static::lazy_static! {
                 options: HttpCacheOptions::default(),
             }))
             .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-            .with(CloudflareBypassMiddleware)
             .with_init(|request: RequestBuilder| -> RequestBuilder {
                 request
                     .header(reqwest::header::USER_AGENT, fake_user_agent::get_rua())

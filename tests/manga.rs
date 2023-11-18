@@ -59,9 +59,9 @@ test_manga_mod! {
     mangasushi: "https://mangasushi.org/manga/shin-no-nakama-janai-to-yuusha-no-party-wo-oidasareta-node-henkyou-de-slow-life-suru-koto-ni-shimashita/";
     mangafoxfull: "https://mangafoxfull.com/manga/magic-emperor/";
     _1stkissmangaclub: "https://1stkissmanga.club/manga/outside-the-law/";
-    #[ignore = "CloudFlare"]
+    #[ignore = "CloudflareIUAM"]
     _1stkissmanga: "https://1stkissmanga.io/manga/outside-the-law/";
-    // #[ignore = "CloudFlare"]
+    // #[ignore = "CloudflareIUAM"]
     s2manga: "https://s2manga.com/manga/under-the-oak-tree/";
     manhwatop: "https://manhwatop.com/manga/magic-emperor/";
     mixedmanga: "https://mixedmanga.com/manga/my-husband-is-an-antisocial-count/";
