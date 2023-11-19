@@ -3,7 +3,7 @@ use std::{fmt::Display, collections::HashMap};
 
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, strum::AsRefStr)]
 pub enum ScrapeError {
     #[error("Reqwest error: {0}")]
     ReqwestError(#[from] reqwest::Error),

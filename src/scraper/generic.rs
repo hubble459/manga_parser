@@ -647,15 +647,12 @@ impl MangaScraper for GenericScraper {
         }
     }
 
-    async fn accepts(&self, _url: &Url) -> bool {
-        // Assume this parser can parse any website
-        true
-
-        // Could also use the following to properly check
-        // But would be a waste of a web call...
-        // let (doc, url) = fetch_doc(url).await?;
-        // let accepted_configs = self.get_configs_for_url(&url, doc.clone());
-        // return !accepted_configs.is_empty();
+    async fn accepts(&self, url: &Url) -> bool {
+        if let Ok((doc, url)) = fetch_doc(url).await {
+            let accepted_configs = self.get_configs_for_url(&url, doc.clone());
+            return !accepted_configs.is_empty();
+        }
+        false
     }
 
     async fn search(
