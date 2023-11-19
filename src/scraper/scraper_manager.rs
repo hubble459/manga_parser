@@ -72,12 +72,13 @@ impl MangaScraper for ScraperManager {
         hostnames: &[String],
     ) -> Result<Vec<SearchManga>, ScrapeError> {
         let mut err = None;
+        let mut search_results = vec![];
         for hostname in hostnames {
             for scraper in self.scrapers.iter() {
                 if scraper.search_accepts(&hostname) {
                     let result = scraper.search(query, &[hostname.to_string()]).await;
                     match result {
-                        Ok(search_results) => return Ok(search_results),
+                        Ok(mut results) => search_results.append(&mut results),
                         Err(e) => {
                             if !matches!(e, ScrapeError::SearchNotSupported(_)) {
                                 error!("Error parsing search: {:?}", e);
@@ -87,6 +88,10 @@ impl MangaScraper for ScraperManager {
                     };
                 }
             }
+        }
+
+        if !search_results.is_empty() || err.is_none() {
+            return Ok(search_results);
         }
 
         Err(err.unwrap_or(ScrapeError::SearchNotSupported(hostnames.to_vec())))
