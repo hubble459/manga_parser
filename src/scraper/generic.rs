@@ -647,12 +647,18 @@ impl MangaScraper for GenericScraper {
         }
     }
 
-    async fn accepts(&self, url: &Url) -> bool {
+    async fn accepts(&self, _url: &Url) -> bool {
+        true
+
+        // Proper check is below, but feels like a wasted call
+        // Also ignores CloudFlare error if there is one
+        /*
         if let Ok((doc, url)) = fetch_doc(url).await {
             let accepted_configs = self.get_configs_for_url(&url, doc.clone());
             return !accepted_configs.is_empty();
         }
         false
+        */
     }
 
     async fn search(
