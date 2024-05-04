@@ -30,6 +30,10 @@ anyhow = "1"
 log = "0"
 simple-builder = { git = "https://github.com/hubble459/simple-builder.git" }
 strum = { version = "0.26", features = ["derive"] }
+mangadex-api = { version = "3.3", features = ["multi-thread"] }
+mangadex-api-types-rust = "0.9"
+mangadex-api-schema-rust = "0.9"
+uuid = { version = "1.8", features = ["serde", "v4"] }
 # simple-builder = { path = "../simple-builder" }
 
 [features]
