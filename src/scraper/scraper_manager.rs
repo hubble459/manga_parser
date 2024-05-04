@@ -3,7 +3,7 @@ use reqwest::Url;
 use crate::{
     error::ScrapeError,
     model::{Manga, SearchManga},
-    scraper::{generic::GenericScraper, MangaScraper},
+    scraper::{generic::GenericScraper, mangadex::MangaDex, MangaScraper},
 };
 
 pub struct ScraperManager {
@@ -19,7 +19,10 @@ impl ScraperManager {
 impl Default for ScraperManager {
     fn default() -> Self {
         Self {
-            scrapers: vec![Box::new(GenericScraper::new().unwrap())],
+            scrapers: vec![
+                Box::new(MangaDex::new()),
+                Box::new(GenericScraper::new().unwrap()),
+            ],
         }
     }
 }

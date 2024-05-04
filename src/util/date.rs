@@ -73,8 +73,7 @@ pub fn try_parse_date(date: &str, date_formats: &[String]) -> Option<DateTime<Ut
         if millis == -1 {
             return None;
         }
-        return NaiveDateTime::from_timestamp_millis(millis)
-            .map(|datetime| DateTime::<Utc>::from_naive_utc_and_offset(datetime, Utc));
+        return DateTime::from_timestamp_millis(millis);
     }
 
     let now = Utc::now();

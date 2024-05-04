@@ -42,6 +42,11 @@ fn test_dates() {
 }
 
 test_manga_mod! {
+    mangadex,
+    mangadex: "https://mangadex.org/title/c9c0f16b-7bd3-4da6-bd58-fcb4bd10112f/onnamaou-sama-wa-yuusha-kun-o-taosenai";
+}
+
+test_manga_mod! {
     madara,
     isekaiscan: "https://isekaiscan.top/manga/moshi-fanren";
     isekaiscanmanga: "https://isekaiscanmanga.com/manga/silver-devil-king/";
