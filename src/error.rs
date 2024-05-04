@@ -40,6 +40,15 @@ pub enum ScrapeError {
 
     #[error("Cloudflare I'm Under Attack Mode")]
     CloudflareIUAM,
+
+    #[error("Unknown error: {0}")]
+    UnknownError(#[from] Box<dyn std::error::Error + Send>),
+
+    #[error("Unknown error: {0}")]
+    UnknownErrorStr(&'static str),
+
+    #[error("Missing manga title")]
+    MissingMangaTitle,
 }
 
 impl serde::de::Error for ScrapeError {
