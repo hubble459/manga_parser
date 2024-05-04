@@ -8,7 +8,6 @@ pub struct StringSelector {
     pub options: StringSelectorOptions,
 }
 
-
 #[cfg_attr(feature = "debug", derive(Debug))]
 pub struct StringSelectors {
     pub selectors: Vec<StringSelector>,

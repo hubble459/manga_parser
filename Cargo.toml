@@ -29,7 +29,7 @@ task-local-extensions = "0"
 anyhow = "1"
 log = "0"
 simple-builder = { git = "https://github.com/hubble459/simple-builder.git" }
-strum = { version = "0.25.0", features = ["derive"] }
+strum = { version = "0.26", features = ["derive"] }
 # simple-builder = { path = "../simple-builder" }
 
 [features]
