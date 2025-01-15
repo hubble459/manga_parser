@@ -1,5 +1,4 @@
-
-use std::{fmt::Display, collections::HashMap};
+use std::{collections::HashMap, fmt::Display};
 
 use thiserror::Error;
 
@@ -56,4 +55,3 @@ impl serde::de::Error for ScrapeError {
         ScrapeError::ConfigDeserializeError(msg.to_string())
     }
 }
-

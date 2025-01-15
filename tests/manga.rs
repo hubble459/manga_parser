@@ -1,7 +1,4 @@
-use manga_parser::{
-    error::ScrapeError, model::Manga, scraper::scraper_manager::ScraperManager,
-    scraper::MangaScraper,
-};
+use manga_parser::{error::ScrapeError, model::Manga, scraper::scraper_manager::ScraperManager, scraper::MangaScraper};
 lazy_static::lazy_static! {
     static ref SCRAPER_MANAGER: ScraperManager = ScraperManager::default();
 }
@@ -32,12 +29,10 @@ macro_rules! test_manga_mod {
 
 #[test_log::test]
 fn test_dates() {
-    let date =
-        manga_parser::util::date::try_parse_date("18 April، 2022", &vec!["%d %B، %Y".to_string()]);
+    let date = manga_parser::util::date::try_parse_date("18 April، 2022", &vec!["%d %B، %Y".to_string()]);
     log::info!("date: {:?}", date);
 
-    let date =
-        manga_parser::util::date::try_parse_date("an hour ago", &vec!["%d %B، %Y".to_string()]);
+    let date = manga_parser::util::date::try_parse_date("an hour ago", &vec!["%d %B، %Y".to_string()]);
     log::info!("date: {:?}", date);
 }
 
@@ -52,32 +47,19 @@ test_manga_mod! {
     isekaiscanmanga: "https://isekaiscanmanga.com/manga/silver-devil-king/";
     #[ignore = "CloudflareIUAM"]
     aquamanga: "https://aquamanga.com/read/my-insanely-competent-underlings";
-    hubmanga: "https://hubmanga.com/reincarnation-of-the-suicidal-battle-god";
-    mangapure: "https://mangapure.net/read/reincarnation-of-the-suicidal-battle-god";
     mangaonlineteam: "https://mangaonlineteam.com/manga/miss-divine-doctor-conquer-the-demon-king/";
     manhuaus: "https://manhuaus.com/manga/return-of-immortal-warlord/";
     #[ignore = "CloudflareIUAM"]
-    mangaweebs: "https://mangaweebs.in/manga/2dmgoc9v5rbcjrdng8ra/";
-    #[ignore = "CloudflareIUAM"]
     manhuaplus: "https://manhuaplus.com/manga/ultimate-loading-system/";
-    mangasushi: "https://mangasushi.org/manga/shin-no-nakama-janai-to-yuusha-no-party-wo-oidasareta-node-henkyou-de-slow-life-suru-koto-ni-shimashita/";
+    mangasushi: "https://mangasushi.org/manga/shokei-sareta-saikyou-no-gunnyou-majutsushi-haisenkoku-no-elf-hime-to-kokka-saikensu-sokoku-yo-jama-suru-no-wa-kattedaga-sono-majutsu-tsukutta-no-ore-na-node-kikanai-ga/";
     mangafoxfull: "https://mangafoxfull.com/manga/magic-emperor/";
-    _1stkissmangaclub: "https://1stkissmanga.club/manga/outside-the-law/";
-    #[ignore = "CloudflareIUAM"]
-    _1stkissmanga: "https://1stkissmanga.io/manga/outside-the-law/";
     // #[ignore = "CloudflareIUAM"]
-    s2manga: "https://s2manga.com/manga/under-the-oak-tree/";
+    s2manga: "https://s2manga.com/manga/i-raised-cinderella-preciously/";
+    #[ignore = "CloudflareIUAM"]
     manhwatop: "https://manhwatop.com/manga/magic-emperor/";
-    mixedmanga: "https://mixedmanga.com/manga/my-husband-is-an-antisocial-count/";
-    manga68: "https://manga68.com/manga/magic-emperor/";
-    manhuadex: "https://manhuadex.com/manhua/the-eunuchs-consort-rules-the-world/";
-    mangachill: "https://mangachill.net/manga/the-eunuchs-consort-rules-thechbacc/";
+    // this website became full on vietnamese; am not dealing with that lmao
+    // manga68: "https://manga68.com/manga/7-cats/";
     mangarockteam: "https://mangarockteam.com/manga/academys-undercover-professor/";
-    mangazukiteam: "https://mangazukiteam.com/manga/shinjiteita-nakama-tachi-ni-dungeon/";
-    azmanhwa: "https://azmanhwa.net/manga/i-have-max-level-luck";
-    topmanhua: "https://topmanhua.com/manhua/the-beginning-after-the-end/";
-    yaoi: "https://yaoi.mobi/manga/stack-overflow-raw-yaoi0003/";
-    mangatx: "https://mangatx.com/manga/lightning-degree/";
     manhuafast: "https://manhuafast.com/manga/descending-the-mountain-as-invincible-all-chapters/";
 }
 
@@ -103,10 +85,7 @@ async fn assert_manga(manga: Manga, ignore: &[&'static str]) {
         assert!(!manga.authors.is_empty(), "Missing authors");
     }
     if !ignore.contains(&"alt_titles") {
-        assert!(
-            !manga.alternative_titles.is_empty(),
-            "Missing alternative titles"
-        );
+        assert!(!manga.alternative_titles.is_empty(), "Missing alternative titles");
     }
     assert!(!manga.chapters.is_empty(), "Missing chapters");
     let mut unique_urls = vec![];
@@ -125,18 +104,13 @@ async fn assert_manga(manga: Manga, ignore: &[&'static str]) {
     }
 
     let first_chapter = manga.chapters.first().unwrap();
-    let images = SCRAPER_MANAGER
-        .chapter_images(&first_chapter.url)
-        .await
-        .unwrap();
+    let images = SCRAPER_MANAGER.chapter_images(&first_chapter.url).await.unwrap();
     assert!(!images.is_empty(), "No images found in chapter");
 
     let hostname = manga.url.host_str().expect("Missing hostname in URL");
 
     if SCRAPER_MANAGER.search_accepts(hostname) {
-        let search_results = SCRAPER_MANAGER
-            .search(&manga.title, &[hostname.to_string()])
-            .await;
+        let search_results = SCRAPER_MANAGER.search(&manga.title, &[hostname.to_string()]).await;
         let search_results = search_results.unwrap();
 
         log::info!("sr: {:?}", search_results);

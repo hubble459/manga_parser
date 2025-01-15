@@ -36,11 +36,7 @@ impl GenericScraper {
 
         for file in path.read_dir()?.flatten() {
             if matches!(
-                file.path()
-                    .extension()
-                    .unwrap_or_default()
-                    .to_str()
-                    .unwrap(),
+                file.path().extension().unwrap_or_default().to_str().unwrap(),
                 "yaml" | "yml"
             ) {
                 let config = ConfigBuilder::<DefaultState>::default()
@@ -84,11 +80,7 @@ impl GenericScraper {
         }
     }
 
-    fn select_required_string(
-        &self,
-        selector: &StringSelectors,
-        doc: DocWrapper,
-    ) -> Result<String, ScrapeError> {
+    fn select_required_string(&self, selector: &StringSelectors, doc: DocWrapper) -> Result<String, ScrapeError> {
         self.select_string(selector, doc)?
             .ok_or(ScrapeError::WebScrapingError(format!(
                 "Missing required field with selectors: {:?}",
@@ -96,11 +88,7 @@ impl GenericScraper {
             )))
     }
 
-    fn select_string(
-        &self,
-        selectors: &StringSelectors,
-        doc: DocWrapper,
-    ) -> Result<Option<String>, ScrapeError> {
+    fn select_string(&self, selectors: &StringSelectors, doc: DocWrapper) -> Result<Option<String>, ScrapeError> {
         for selector in &selectors.selectors {
             let elements = doc
                 .select(&selector.selector)
@@ -127,9 +115,7 @@ impl GenericScraper {
                 }
                 // Fix capitalization
                 text = match &selector.options.fix_capitalization {
-                    string_selector_options::FixCapitalization::Title => {
-                        text.to_case(convert_case::Case::Title)
-                    }
+                    string_selector_options::FixCapitalization::Title => text.to_case(convert_case::Case::Title),
                     string_selector_options::FixCapitalization::Skip => text,
                 };
 
@@ -143,11 +129,7 @@ impl GenericScraper {
         Ok(None)
     }
 
-    fn select_string_array(
-        &self,
-        selectors: &ArraySelectors,
-        doc: DocWrapper,
-    ) -> Result<Vec<String>, ScrapeError> {
+    fn select_string_array(&self, selectors: &ArraySelectors, doc: DocWrapper) -> Result<Vec<String>, ScrapeError> {
         for selector in &selectors.selectors {
             let elements = doc
                 .select(&selector.selector)
@@ -161,9 +143,7 @@ impl GenericScraper {
                 let mut text = match &selector.options.text_selection {
                     StringSelection::AllText { join_with } => element.all_text(join_with),
                     StringSelection::OwnText => element.own_text(),
-                    StringSelection::Attributes(attrs) => {
-                        element.attr_first_of(attrs).unwrap_or_default()
-                    }
+                    StringSelection::Attributes(attrs) => element.attr_first_of(attrs).unwrap_or_default(),
                 };
                 // Trim text
                 text = text.trim().to_string();
@@ -176,9 +156,7 @@ impl GenericScraper {
                 }
                 // Fix capitalization
                 text = match &selector.options.fix_capitalization {
-                    string_selector_options::FixCapitalization::Title => {
-                        text.to_case(convert_case::Case::Title)
-                    }
+                    string_selector_options::FixCapitalization::Title => text.to_case(convert_case::Case::Title),
                     string_selector_options::FixCapitalization::Skip => text,
                 };
                 if !text.is_empty() {
@@ -233,27 +211,23 @@ impl GenericScraper {
         if !search_url.starts_with("http") {
             search_url = String::from("https://") + &search_url;
         }
-        let search_url =
-            Url::parse(&search_url).map_err(|e| ScrapeError::NotAValidURL(e.to_string()))?;
+        let search_url = Url::parse(&search_url).map_err(|e| ScrapeError::NotAValidURL(e.to_string()))?;
         debug!("[SEARCH]: Search URL is {}", search_url.to_string());
 
         let (doc, ..) = fetch_doc_config(&search_url, Method::GET, None::<String>).await?;
 
         let elements = {
-            let mut elements: Option<
-                kuchiki::iter::Select<kuchiki::iter::Elements<kuchiki::iter::Descendants>>,
-            > = None;
+            let mut elements: Option<kuchiki::iter::Select<kuchiki::iter::Elements<kuchiki::iter::Descendants>>> = None;
             for selector in &search_config.selectors.base.selectors {
-                elements = Some(doc.select(&selector.selector).map_err(|_| {
-                    ScrapeError::SelectorError("Error in search base selector".to_string())
-                })?);
+                elements = Some(
+                    doc.select(&selector.selector)
+                        .map_err(|_| ScrapeError::SelectorError("Error in search base selector".to_string()))?,
+                );
                 if elements.as_ref().is_some_and(|els| !els.is_empty()) {
                     break;
                 }
             }
-            elements.ok_or(ScrapeError::SelectorError(
-                "Error in search base selector".to_string(),
-            ))
+            elements.ok_or(ScrapeError::SelectorError("Error in search base selector".to_string()))
         }?;
 
         let mut search_results = vec![];
@@ -265,21 +239,15 @@ impl GenericScraper {
                     &search_config.selectors.url,
                     DocWrapper(element.as_node().clone()),
                 )?,
-                title: self.select_required_string(
-                    &search_config.selectors.title,
-                    DocWrapper(element.as_node().clone()),
-                )?,
+                title: self
+                    .select_required_string(&search_config.selectors.title, DocWrapper(element.as_node().clone()))?,
                 cover_url: search_config
                     .selectors
                     .cover_url
                     .as_ref()
                     .and_then(|selector| {
-                        self.select_url(
-                            &search_url,
-                            selector,
-                            DocWrapper(element.as_node().clone()),
-                        )
-                        .ok()
+                        self.select_url(&search_url, selector, DocWrapper(element.as_node().clone()))
+                            .ok()
                     })
                     .flatten(),
                 posted: search_config
@@ -287,12 +255,8 @@ impl GenericScraper {
                     .posted
                     .as_ref()
                     .and_then(|selector| {
-                        self.select_date(
-                            &config.date_formats,
-                            selector,
-                            DocWrapper(element.as_node().clone()),
-                        )
-                        .ok()
+                        self.select_date(&config.date_formats, selector, DocWrapper(element.as_node().clone()))
+                            .ok()
                     })
                     .flatten(),
             })
@@ -309,7 +273,10 @@ impl GenericScraper {
     ) -> Result<DocWrapper, ScrapeError> {
         for ext_fetch in fetch_external {
             let hostname = url.host_str().unwrap();
-            debug!("[external] Trying fetch on {}", hostname);
+            debug!(
+                "[external] Trying fetch on {} with selectors ({:#?})",
+                hostname, ext_fetch.id.selectors
+            );
             let element = self.select_string(&ext_fetch.id, doc.clone()).ok();
             if let Some(Some(text)) = element {
                 debug!("[external] Found {:?}", text);
@@ -319,6 +286,7 @@ impl GenericScraper {
                     debug!("[external] Which is id {}", id);
                     let chapter_url = ext_fetch.url.replace("{id}", id);
                     let chapter_url = chapter_url.replace("{host}", hostname);
+                    let chapter_url = chapter_url.replace("{url}", url.as_str());
                     debug!("[external] URL is {}", chapter_url);
                     if let Ok(url) = url.join(&chapter_url) {
                         debug!("[external] Full URL is {}", chapter_url);
@@ -326,8 +294,7 @@ impl GenericScraper {
                             "post" => Method::POST,
                             _ => Method::GET,
                         };
-                        let (chapter_doc, ..) =
-                            fetch_doc_config(&url, method, None::<String>).await?;
+                        let (chapter_doc, ..) = fetch_doc_config(&url, method, None::<String>).await?;
                         doc = chapter_doc;
                         break;
                     }
@@ -346,32 +313,26 @@ impl GenericScraper {
     ) -> Result<Vec<Chapter>, ScrapeError> {
         let chapter_config = &config.manga.chapter;
 
-        let doc = self
-            .fetch_external(url, doc, &chapter_config.fetch_external)
-            .await?;
+        let doc = self.fetch_external(url, doc, &chapter_config.fetch_external).await?;
 
         let elements = {
             let mut elements = None;
             for selector in &chapter_config.base.selectors {
-                elements = Some(doc.select(&selector.selector).map_err(|_| {
-                    ScrapeError::SelectorError("Error in chapter base selector".to_string())
-                })?);
+                elements = Some(
+                    doc.select(&selector.selector)
+                        .map_err(|_| ScrapeError::SelectorError("Error in chapter base selector".to_string()))?,
+                );
                 if elements.as_ref().is_some_and(|els| !els.is_empty()) {
                     break;
                 }
             }
-            elements.ok_or(ScrapeError::SelectorError(
-                "Error in chapter base selector".to_string(),
-            ))
+            elements.ok_or(ScrapeError::SelectorError("Error in chapter base selector".to_string()))
         }?;
 
         let mut chapters = vec![];
         let total_chapters = elements.len();
         for (index, element) in elements.enumerate() {
-            let title = self.select_required_string(
-                &chapter_config.title,
-                DocWrapper(element.as_node().clone()),
-            )?;
+            let title = self.select_required_string(&chapter_config.title, DocWrapper(element.as_node().clone()))?;
             let number_text = chapter_config
                 .number
                 .as_ref()
@@ -383,24 +344,15 @@ impl GenericScraper {
                 .unwrap_or_else(|| title.clone());
 
             chapters.push(Chapter {
-                url: self.select_required_url(
-                    url,
-                    &chapter_config.url,
-                    DocWrapper(element.as_node().clone()),
-                )?,
+                url: self.select_required_url(url, &chapter_config.url, DocWrapper(element.as_node().clone()))?,
                 title,
-                number: crate::util::number::try_parse_number(&number_text)
-                    .unwrap_or((total_chapters - index) as f32),
+                number: crate::util::number::try_parse_number(&number_text).unwrap_or((total_chapters - index) as f32),
                 date: chapter_config
                     .date
                     .as_ref()
                     .and_then(|selector| {
-                        self.select_date(
-                            &config.date_formats,
-                            selector,
-                            DocWrapper(element.as_node().clone()),
-                        )
-                        .ok()
+                        self.select_date(&config.date_formats, selector, DocWrapper(element.as_node().clone()))
+                            .ok()
                     })
                     .flatten(),
             })
@@ -419,17 +371,10 @@ impl GenericScraper {
         Ok(crate::util::date::try_parse_date(&text, date_formats))
     }
 
-    async fn images(
-        &self,
-        url: Url,
-        config: &MangaScraperConfig,
-        doc: DocWrapper,
-    ) -> Result<Vec<Url>, ScrapeError> {
+    async fn images(&self, url: Url, config: &MangaScraperConfig, doc: DocWrapper) -> Result<Vec<Url>, ScrapeError> {
         debug!("[images] parsing images for {}", url.as_str());
 
-        let doc = self
-            .fetch_external(&url, doc, &config.images.fetch_external)
-            .await?;
+        let doc = self.fetch_external(&url, doc, &config.images.fetch_external).await?;
 
         let images = self.select_string_array(&config.images.image_selector, doc)?;
         debug!("[images] found {} images", images.len());
@@ -460,9 +405,12 @@ impl GenericScraper {
         manga_builder.url(url.clone());
         // Status
         if !manga_builder.has_status() {
-            if let Some(status) = config.manga.status.as_ref().map_or(Ok(None), |selector| {
-                self.select_string(selector, doc.clone())
-            })? {
+            if let Some(status) = config
+                .manga
+                .status
+                .as_ref()
+                .map_or(Ok(None), |selector| self.select_string(selector, doc.clone()))?
+            {
                 manga_builder.status(status.clone());
                 manga_builder.is_ongoing(self.manga_status(Some(status)));
             }
@@ -484,9 +432,7 @@ impl GenericScraper {
             .manga
             .cover_url
             .as_ref()
-            .map_or(Ok(None), |selector| {
-                self.select_url(&url, selector, doc.clone())
-            })?
+            .map_or(Ok(None), |selector| self.select_url(&url, selector, doc.clone()))?
         {
             manga_builder.cover_url(cover_url);
         }
@@ -496,9 +442,7 @@ impl GenericScraper {
                 .manga
                 .authors
                 .as_ref()
-                .map_or(Ok(vec![]), |selector| {
-                    self.select_string_array(selector, doc.clone())
-                })?,
+                .map_or(Ok(vec![]), |selector| self.select_string_array(selector, doc.clone()))?,
         );
         // Genres
         manga_builder.genres(
@@ -506,9 +450,7 @@ impl GenericScraper {
                 .manga
                 .genres
                 .as_ref()
-                .map_or(Ok(vec![]), |selector| {
-                    self.select_string_array(selector, doc.clone())
-                })?,
+                .map_or(Ok(vec![]), |selector| self.select_string_array(selector, doc.clone()))?,
         );
         // Alternative Titles
         manga_builder.alternative_titles(
@@ -516,9 +458,7 @@ impl GenericScraper {
                 .manga
                 .alt_titles
                 .as_ref()
-                .map_or(Ok(vec![]), |selector| {
-                    self.select_string_array(selector, doc.clone())
-                })?,
+                .map_or(Ok(vec![]), |selector| self.select_string_array(selector, doc.clone()))?,
         );
         // Chapters
         if !manga_builder.has_chapters() {
@@ -601,10 +541,7 @@ impl MangaScraper for GenericScraper {
                 Ok(manga_builder) => match manga_builder.build() {
                     Ok(manga) => return Ok(manga),
                     Err(e) => {
-                        errors.insert(
-                            config.name.clone(),
-                            ScrapeError::WebScrapingError(e.to_string()),
-                        );
+                        errors.insert(config.name.clone(), ScrapeError::WebScrapingError(e.to_string()));
                     }
                 },
                 Err(e) => {
@@ -661,11 +598,7 @@ impl MangaScraper for GenericScraper {
         */
     }
 
-    async fn search(
-        &self,
-        query: &str,
-        hostnames: &[String],
-    ) -> Result<Vec<SearchManga>, ScrapeError> {
+    async fn search(&self, query: &str, hostnames: &[String]) -> Result<Vec<SearchManga>, ScrapeError> {
         let mut err = None;
         let mut results = vec![];
         for hostname in hostnames {
@@ -696,9 +629,7 @@ impl MangaScraper for GenericScraper {
     }
 
     fn search_accepts(&self, hostname: &str) -> bool {
-        self.searchable_hostnames()
-            .binary_search(&hostname.to_string())
-            .is_ok()
+        self.searchable_hostnames().binary_search(&hostname.to_string()).is_ok()
     }
 }
 
@@ -720,11 +651,7 @@ fn html_to_doc(html: &str) -> Result<DocWrapper, ScrapeError> {
     Ok(DocWrapper(doc))
 }
 
-async fn fetch_doc_config<T>(
-    url: &Url,
-    method: Method,
-    body: Option<T>,
-) -> Result<(DocWrapper, Url), ScrapeError>
+async fn fetch_doc_config<T>(url: &Url, method: Method, body: Option<T>) -> Result<(DocWrapper, Url), ScrapeError>
 where
     T: Into<Body>,
 {

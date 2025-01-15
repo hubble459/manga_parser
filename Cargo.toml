@@ -3,17 +3,15 @@ name = "manga_parser"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 chrono = { version = "0", features = ["serde"] }
 config = { version = "0", features = ["yaml", "toml", "json"] }
 serde = { version = "1", features = ["derive"] }
 serde_regex = "1"
 regex = "1"
-notify = { version = "6", optional = true }
+notify = { version = "8", optional = true }
 kuchiki = { git = "https://github.com/hubble459/kuchiki-pseudos.git" }
-thiserror = "1"
+thiserror = "2"
 lazy_static = "1"
 tokio = "1"
 futures = "0"
@@ -31,10 +29,9 @@ log = "0"
 simple-builder = { git = "https://github.com/hubble459/simple-builder.git" }
 strum = { version = "0.26", features = ["derive"] }
 mangadex-api = { version = "3.3", features = ["multi-thread"] }
-mangadex-api-types-rust = "0.9"
-mangadex-api-schema-rust = "0.9"
+mangadex-api-types-rust = "0.10"
+mangadex-api-schema-rust = "0.10"
 uuid = { version = "1.8", features = ["serde", "v4"] }
-# simple-builder = { path = "../simple-builder" }
 
 [features]
 default = ["serde", "debug", "watch_dir"]

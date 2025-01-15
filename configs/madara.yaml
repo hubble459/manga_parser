@@ -2,10 +2,10 @@ name: madara
 
 accept:
   selectors:
-    - '[href*=madara]'
-    - '[content*=madara]'
-    - 'script#madara-core-js'
-    - '[src*=madara]'
+    - "[href*=madara]"
+    - "[content*=madara]"
+    - "script#madara-core-js"
+    - "[src*=madara]"
     - body.wp-manga-template-default
   hostnames:
     - isekaiscan.top
@@ -74,7 +74,7 @@ manga:
         url: /ajax-list-chapter?mangaID={id}
 
       - id:
-          selector: 'link[rel=canonical][href*=mangasushi], link[rel=canonical][href*=manga68]'
+          selector: "link[rel=canonical][href*=mangasushi], link[rel=canonical][href*=manga68]"
           options:
             text_selection:
               type: attributes
@@ -82,6 +82,17 @@ manga:
                 - href
         regex: /manga/(?<id>[^/]+)/
         url: https://{host}/manga/{id}/ajax/chapters/
+        method: post
+
+      - id:
+          selector: "#manga-chapters-holder"
+          options:
+            text_selection:
+              type: attributes
+              attributes:
+                - data-id
+        regex: (?<id>.*)
+        url: "{url}ajax/chapters/"
         method: post
 images:
   image_selector:
@@ -95,7 +106,7 @@ images:
         text_split_regex: null
     - selector: p#arraydata
       options:
-        text_split_regex: ','
+        text_split_regex: ","
 
 search:
   - hostnames:
@@ -103,9 +114,9 @@ search:
     search_url: "{hostname}/search?s={query}"
     query_format:
       - replace_regex: '\+'
-        replace_with: '%2B'
-      - replace_regex: ' '
-        replace_with: '+'
+        replace_with: "%2B"
+      - replace_regex: " "
+        replace_with: "+"
     selectors:
       base: ".c-tabs-item__content"
       url:

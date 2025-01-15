@@ -1,6 +1,4 @@
-use chrono::{
-    DateTime, Datelike, Duration, Months, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc,
-};
+use chrono::{DateTime, Datelike, Duration, Months, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use regex::{Captures, Regex};
 
 lazy_static::lazy_static! {
@@ -65,6 +63,7 @@ pub fn try_parse_date(date: &str, date_formats: &[String]) -> Option<DateTime<Ut
     if date.is_empty() {
         return None;
     }
+
     let date = date.trim();
 
     // Check if epoch millis [digits only]
@@ -122,22 +121,21 @@ pub fn try_parse_date(date: &str, date_formats: &[String]) -> Option<DateTime<Ut
             } else if let Err(e) = datetime {
                 if e.kind() == chrono::format::ParseErrorKind::NotEnough {
                     // Retry with year
-                    let datetime = NaiveDateTime::parse_from_str(
-                        &format!("{date}-{}", now.year()),
-                        &format!("{format}-%Y"),
-                    );
+                    let datetime =
+                        NaiveDateTime::parse_from_str(&format!("{date}-{}", now.year()), &format!("{format}-%Y"));
                     if let Ok(date) = datetime {
                         return Some(Utc.from_utc_datetime(&date));
                     } else if let Err(e) = datetime {
                         // If missing time
-                        if matches!(e.kind(), chrono::format::ParseErrorKind::NotEnough | chrono::format::ParseErrorKind::Impossible) {
+                        if matches!(
+                            e.kind(),
+                            chrono::format::ParseErrorKind::NotEnough | chrono::format::ParseErrorKind::Impossible
+                        ) {
                             // Parse only date
                             let date = NaiveDate::parse_from_str(date, format);
                             if let Ok(date) = date {
                                 // Return date time with default time
-                                return Some(
-                                    Utc.from_utc_datetime(&date.and_time(NaiveTime::default())),
-                                );
+                                return Some(Utc.from_utc_datetime(&date.and_time(NaiveTime::default())));
                             }
                         }
                     }
@@ -151,33 +149,28 @@ pub fn try_parse_date(date: &str, date_formats: &[String]) -> Option<DateTime<Ut
         let date = &ORDINAL_NUMBER
             .replace_all(&date, |cap: &Captures| cap[1].to_owned())
             .into_owned();
-        for format in date_formats
-            .iter()
-            .map(String::as_str)
-            .chain(DEFAULT_DATE_FORMATS)
-        {
+        for format in date_formats.iter().map(String::as_str).chain(DEFAULT_DATE_FORMATS) {
             let datetime = NaiveDateTime::parse_from_str(date, format);
             if let Ok(date) = datetime {
                 return Some(Utc.from_utc_datetime(&date));
             } else if let Err(e) = datetime {
                 if e.kind() == chrono::format::ParseErrorKind::NotEnough {
                     // Retry with year
-                    let datetime = NaiveDateTime::parse_from_str(
-                        &format!("{date}-{}", now.year()),
-                        &format!("{format}-%Y"),
-                    );
+                    let datetime =
+                        NaiveDateTime::parse_from_str(&format!("{date}-{}", now.year()), &format!("{format}-%Y"));
                     if let Ok(date) = datetime {
                         return Some(Utc.from_utc_datetime(&date));
                     } else if let Err(e) = datetime {
                         // If missing time
-                        if matches!(e.kind(), chrono::format::ParseErrorKind::NotEnough | chrono::format::ParseErrorKind::Impossible) {
+                        if matches!(
+                            e.kind(),
+                            chrono::format::ParseErrorKind::NotEnough | chrono::format::ParseErrorKind::Impossible
+                        ) {
                             // Parse only date
                             let date = NaiveDate::parse_from_str(date, format);
                             if let Ok(date) = date {
                                 // Return date time with default time
-                                return Some(
-                                    Utc.from_utc_datetime(&date.and_time(NaiveTime::default())),
-                                );
+                                return Some(Utc.from_utc_datetime(&date.and_time(NaiveTime::default())));
                             }
                         }
                     }
@@ -196,7 +189,7 @@ pub fn try_parse_date(date: &str, date_formats: &[String]) -> Option<DateTime<Ut
         let amount: i64 = captures.get(1).unwrap().as_str().parse().unwrap_or(1);
         let rel_type = captures.get(2).unwrap().as_str();
 
-        // Minutes
+        // Minutes because "m" will parse as months
         if rel_type == "mi" {
             return Some(now - Duration::minutes(amount));
         }
@@ -209,7 +202,7 @@ pub fn try_parse_date(date: &str, date_formats: &[String]) -> Option<DateTime<Ut
             'd' => Some(now - Duration::days(amount)),
             'w' => Some(now - Duration::weeks(amount)),
             'm' => Some(now - Months::new(amount as u32)),
-            'y' => Some(now - Duration::days(365 * amount)),
+            'y' => Some(now - Months::new(12 * amount as u32)),
             _ => None,
         };
     }
@@ -220,7 +213,7 @@ pub fn try_parse_date(date: &str, date_formats: &[String]) -> Option<DateTime<Ut
 
 #[cfg(test)]
 mod test {
-    use chrono::{Utc, Duration, DateTime, Months};
+    use chrono::{DateTime, Datelike, Duration, Months, Utc};
 
     #[test]
     fn date_parse() {
@@ -246,15 +239,13 @@ mod test {
         let date = crate::util::date::try_parse_date("Last week", &date_formats);
         compare_without_time(&(now - Duration::weeks(1)), date);
 
-        let date =
-            crate::util::date::try_parse_date(&now.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string(), &date_formats);
+        let date = crate::util::date::try_parse_date(&now.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string(), &date_formats);
         compare_without_time(&now, date);
 
         let date = crate::util::date::try_parse_date(&now.to_rfc3339(), &date_formats);
         compare_without_time(&now, date);
 
-        let date =
-            crate::util::date::try_parse_date(&now.format("%Y-%m-%dT%H:%M:%SZ").to_string(), &date_formats);
+        let date = crate::util::date::try_parse_date(&now.format("%Y-%m-%dT%H:%M:%SZ").to_string(), &date_formats);
         compare_without_time(&now, date);
 
         let date = crate::util::date::try_parse_date(&now.format("%Y-%m-%dT%H:%M:%S").to_string(), &date_formats);
@@ -303,7 +294,7 @@ mod test {
         compare_without_time(&now.checked_sub_months(Months::new(2)).unwrap(), date);
 
         let date = crate::util::date::try_parse_date("2 years", &date_formats);
-        compare_without_time(&now.checked_sub_months(Months::new(24)).unwrap(), date);
+        compare_without_time(&now.with_year(now.year() - 2).unwrap(), date);
 
         let date = crate::util::date::try_parse_date(&now.format("%b %d, %R").to_string(), &date_formats);
         compare_without_time(&now, date);
