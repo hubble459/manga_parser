@@ -27,7 +27,7 @@ task-local-extensions = "0"
 anyhow = "1"
 log = "0"
 simple-builder = { git = "https://github.com/hubble459/simple-builder.git" }
-strum = { version = "0.26", features = ["derive"] }
+strum = { version = "0.27", features = ["derive"] }
 mangadex-api = { version = "3.3", features = ["multi-thread"] }
 mangadex-api-types-rust = "0.10"
 mangadex-api-schema-rust = "0.10"
