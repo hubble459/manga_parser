@@ -26,7 +26,7 @@ lazy_static::lazy_static! {
         )
             .with(Cache(HttpCache {
                 mode: CacheMode::ForceCache,
-                manager: CACacheManager::default(),
+                manager: CACacheManager::new("http-cacache".into(), true),
                 options: HttpCacheOptions::default(),
             }))
             .with(RetryTransientMiddleware::new_with_policy(retry_policy))
