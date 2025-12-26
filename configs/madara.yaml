@@ -96,7 +96,7 @@ manga:
         method: post
 images:
   image_selector:
-    - selector: img.wp-manga-chapter-img
+    - selector: img.wp-manga-chapter-img, li.blocks-gallery-item img, div.reading-content div.text-left img
       options:
         text_selection:
           type: attributes
