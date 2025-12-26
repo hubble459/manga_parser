@@ -57,6 +57,7 @@ test_manga_mod! {
     mangasushi: "https://mangasushi.org/manga/shokei-sareta-saikyou-no-gunnyou-majutsushi-haisenkoku-no-elf-hime-to-kokka-saikensu-sokoku-yo-jama-suru-no-wa-kattedaga-sono-majutsu-tsukutta-no-ore-na-node-kikanai-ga/";
     #[ignore = "Website doesn't exist anymore"]
     mangafoxfull: "https://mangafoxfull.com/manga/magic-emperor/";
+    lhtranslation: "https://lhtranslation.net/manga/maou-ni-natta-node-dungeon-tsukutte-jingai-musume-to-honobono-suru/";
     s2manga: "https://s2manga.com/manga/i-m-ready-for-divorce/", ignore = ["authors"];
     #[ignore = "CloudflareIUAM"]
     manhwatop: "https://manhwatop.com/manga/magic-emperor/";
