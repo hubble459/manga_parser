@@ -57,7 +57,7 @@ test_manga_mod! {
     mangasushi: "https://mangasushi.org/manga/shokei-sareta-saikyou-no-gunnyou-majutsushi-haisenkoku-no-elf-hime-to-kokka-saikensu-sokoku-yo-jama-suru-no-wa-kattedaga-sono-majutsu-tsukutta-no-ore-na-node-kikanai-ga/";
     #[ignore = "Website doesn't exist anymore"]
     mangafoxfull: "https://mangafoxfull.com/manga/magic-emperor/";
-    lhtranslation: "https://lhtranslation.net/manga/maou-ni-natta-node-dungeon-tsukutte-jingai-musume-to-honobono-suru/";
+    lhtranslation: "https://lhtranslation.net/manga/7th-demon-prince-jilbagias-the-demon-kingdom-destroyer/";
     s2manga: "https://s2manga.com/manga/i-m-ready-for-divorce/", ignore = ["authors"];
     #[ignore = "CloudflareIUAM"]
     manhwatop: "https://manhwatop.com/manga/magic-emperor/";
@@ -97,11 +97,7 @@ async fn assert_manga(manga: Manga, ignore: &[&'static str]) {
     for chapter in manga.chapters.iter() {
         assert!(chapter.url.has_host(), "Chapter url is missing host");
         let url = chapter.url.to_string();
-        assert!(
-            !unique_urls.contains(&url),
-            "Duplicate chapter url ({url}) {}",
-            unique_urls.join(",")
-        );
+        assert!(!unique_urls.contains(&url), "Duplicate chapter url ({url})");
         unique_urls.push(url);
         if !ignore.contains(&"chapter_date") {
             assert!(
