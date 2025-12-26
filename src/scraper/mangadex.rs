@@ -6,8 +6,8 @@ use mangadex_api::v5::schema::RelatedAttributes;
 use mangadex_api::v5::MangaDexClient;
 use mangadex_api_schema_rust::v5::ChapterObject;
 use mangadex_api_types_rust::{
-    ChapterSortOrder, IncludeFuturePublishAt, IncludeFutureUpdates, Language, MangaStatus,
-    OrderDirection, ReferenceExpansionResource, RelationshipType,
+    ChapterSortOrder, IncludeFuturePublishAt, IncludeFutureUpdates, Language, MangaStatus, OrderDirection,
+    ReferenceExpansionResource, RelationshipType,
 };
 use reqwest::Url;
 use tokio::time::sleep;
@@ -41,9 +41,10 @@ impl MangaScraper for MangaDex {
             .filter(|s| s == &"title" || s == &"manga")
             .ok_or(ScrapeError::WebsiteNotSupported(url.to_string()))?;
 
-        let uuid = &uuid::Uuid::parse_str(segments.next().ok_or(
-            ScrapeError::WebsiteNotSupported(format!("No ID found in url ({})", url.as_str())),
-        )?)
+        let uuid = &uuid::Uuid::parse_str(segments.next().ok_or(ScrapeError::WebsiteNotSupported(format!(
+            "No ID found in url ({})",
+            url.as_str()
+        )))?)
         .map_err(|e| ScrapeError::UnknownError(Box::new(e)))?;
 
         let manga = self
@@ -141,10 +142,7 @@ impl MangaScraper for MangaDex {
                 Chapter {
                     number,
                     date: Some(
-                        DateTime::from_timestamp_millis(
-                            chapter.attributes.created_at.as_ref().unix_timestamp(),
-                        )
-                        .unwrap(),
+                        DateTime::from_timestamp_secs(chapter.attributes.created_at.as_ref().unix_timestamp()).unwrap(),
                     ),
                     title: chapter
                         .attributes
@@ -152,8 +150,7 @@ impl MangaScraper for MangaDex {
                         .clone()
                         .unwrap_or(format!("Chapter {number}"))
                         .to_owned(),
-                    url: Url::parse(&format!("{}/chapter/{}", mangadex_api::API_URL, chapter.id))
-                        .unwrap(),
+                    url: Url::parse(&format!("{}/chapter/{}", mangadex_api::API_URL, chapter.id)).unwrap(),
                 }
             })
             .collect();
@@ -216,11 +213,11 @@ impl MangaScraper for MangaDex {
             .filter(|s| s == &"chapter")
             .ok_or(ScrapeError::WebsiteNotSupported(chapter_url.to_string()))?;
 
-        let uuid =
-            &uuid::Uuid::parse_str(segments.next().ok_or(ScrapeError::WebsiteNotSupported(
-                format!("No ID found in url ({})", chapter_url.as_str()),
-            ))?)
-            .map_err(|e| ScrapeError::UnknownError(Box::new(e)))?;
+        let uuid = &uuid::Uuid::parse_str(segments.next().ok_or(ScrapeError::WebsiteNotSupported(format!(
+            "No ID found in url ({})",
+            chapter_url.as_str()
+        )))?)
+        .map_err(|e| ScrapeError::UnknownError(Box::new(e)))?;
 
         let at_home = self
             .client
@@ -254,11 +251,7 @@ impl MangaScraper for MangaDex {
         Ok(images)
     }
 
-    async fn search(
-        &self,
-        query: &str,
-        _hostnames: &[String],
-    ) -> Result<Vec<SearchManga>, ScrapeError> {
+    async fn search(&self, query: &str, _hostnames: &[String]) -> Result<Vec<SearchManga>, ScrapeError> {
         let results = self
             .client
             .search()
@@ -282,9 +275,11 @@ impl MangaScraper for MangaDex {
                     .get(&Language::English)
                     .unwrap_or(&"No title".to_owned())
                     .to_owned(),
-                posted: m.attributes.updated_at.as_ref().map(|date| {
-                    DateTime::from_timestamp_millis(date.as_ref().unix_timestamp()).unwrap()
-                }),
+                posted: m
+                    .attributes
+                    .updated_at
+                    .as_ref()
+                    .map(|date| DateTime::from_timestamp_secs(date.as_ref().unix_timestamp()).unwrap()),
                 cover_url: m
                     .relationships
                     .clone()
@@ -313,9 +308,7 @@ impl MangaScraper for MangaDex {
     async fn accepts(&self, url: &Url) -> bool {
         let hostname = url.host_str();
         if let Some(hostname) = hostname {
-            self.searchable_hostnames()
-                .binary_search(&hostname.to_string())
-                .is_ok()
+            self.searchable_hostnames().binary_search(&hostname.to_string()).is_ok()
         } else {
             false
         }
@@ -326,8 +319,6 @@ impl MangaScraper for MangaDex {
     }
 
     fn search_accepts(&self, hostname: &str) -> bool {
-        self.searchable_hostnames()
-            .binary_search(&hostname.to_string())
-            .is_ok()
+        self.searchable_hostnames().binary_search(&hostname.to_string()).is_ok()
     }
 }
