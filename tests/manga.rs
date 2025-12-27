@@ -43,29 +43,25 @@ test_manga_mod! {
 
 test_manga_mod! {
     madara,
-    #[ignore = "Website doesn't exist anymore"]
-    isekaiscan: "https://isekaiscan.top/manga/moshi-fanren";
-    #[ignore = "Website doesn't exist anymore"]
-    isekaiscanmanga: "https://isekaiscanmanga.com/manga/silver-devil-king/";
-    #[ignore = "Website doesn't exist anymore"]
-    aquamanga: "https://aquamanga.com/read/my-insanely-competent-underlings";
-    #[ignore = "Website doesn't exist anymore"]
-    mangaonlineteam: "https://mangaonlineteam.com/manga/miss-divine-doctor-conquer-the-demon-king/";
-    #[ignore = "CloudflareIUAM"]
-    manhuaus: "https://manhuaus.com/manga/return-of-immortal-warlord/";
-    manhuaplus: "https://manhuaplus.com/manga/demon-magic-emperor01/";
-    mangasushi: "https://mangasushi.org/manga/shokei-sareta-saikyou-no-gunnyou-majutsushi-haisenkoku-no-elf-hime-to-kokka-saikensu-sokoku-yo-jama-suru-no-wa-kattedaga-sono-majutsu-tsukutta-no-ore-na-node-kikanai-ga/";
-    #[ignore = "Website doesn't exist anymore"]
-    mangafoxfull: "https://mangafoxfull.com/manga/magic-emperor/";
+    #[ignore = "CloudflareIUAM"] manhuaus: "https://manhuaus.com/manga/return-of-immortal-warlord/";
+    #[ignore = "CloudflareIUAM"] manhwaclan: "https://manhwaclan.com/manga/becoming-a-cheat-level-skill-thief/";
+    #[ignore = "CloudflareIUAM"] manhwatop: "https://manhwatop.com/manga/magic-emperor/";
+    #[ignore = "Website doesn't exist anymore"] aquamanga: "https://aquamanga.com/read/my-insanely-competent-underlings";
+    #[ignore = "Website doesn't exist anymore"] isekaiscan: "https://isekaiscan.top/manga/moshi-fanren";
+    #[ignore = "Website doesn't exist anymore"] isekaiscanmanga: "https://isekaiscanmanga.com/manga/silver-devil-king/";
+    #[ignore = "Website doesn't exist anymore"] mangafoxfull: "https://mangafoxfull.com/manga/magic-emperor/";
+    #[ignore = "Website doesn't exist anymore"] mangaonlineteam: "https://mangaonlineteam.com/manga/miss-divine-doctor-conquer-the-demon-king/";
+    #[ignore = "Website doesn't exist anymore"] mangarockteam: "https://mangarockteam.com/manga/academys-undercover-professor/";
     lhtranslation: "https://lhtranslation.net/manga/7th-demon-prince-jilbagias-the-demon-kingdom-destroyer/";
-    s2manga: "https://s2manga.com/manga/i-m-ready-for-divorce/", ignore = ["authors"];
-    #[ignore = "CloudflareIUAM"]
-    manhwatop: "https://manhwatop.com/manga/magic-emperor/";
-    // this website became full on vietnamese; am not dealing with that lmao
-    // manga68: "https://manga68.com/manga/7-cats/";
-    #[ignore = "Website doesn't exist anymore"]
-    mangarockteam: "https://mangarockteam.com/manga/academys-undercover-professor/";
+    mangasushi: "https://mangasushi.org/manga/shokei-sareta-saikyou-no-gunnyou-majutsushi-haisenkoku-no-elf-hime-to-kokka-saikensu-sokoku-yo-jama-suru-no-wa-kattedaga-sono-majutsu-tsukutta-no-ore-na-node-kikanai-ga/";
     manhuafast: "https://manhuafast.com/manga/descending-the-mountain-as-invincible-all-chapters/";
+    manhuaplus: "https://manhuaplus.com/manga/demon-magic-emperor01/";
+    s2manga: "https://s2manga.com/manga/i-m-ready-for-divorce/", ignore = ["authors"];
+}
+
+test_manga_mod! {
+    mangakakalot,
+    mangakakalot: "https://www.mangakakalot.gg/manga/after-improperly-licking-a-dog-i-became-a-billionaire", ignore = ["alt_titles"];
 }
 
 /// Ignored may be

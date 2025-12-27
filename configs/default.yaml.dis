@@ -16,5 +16,5 @@ chapter_number_selector: "span.chapter-number"
 chapter_title_selector: "a"
 chapter_date_selector: "span i"
 chapter_href_selector: "a"
-date_formats: 
+date_formats:
   - "yyyy-MM-dd"
