@@ -64,6 +64,11 @@ test_manga_mod! {
     mangakakalot: "https://www.mangakakalot.gg/manga/after-improperly-licking-a-dog-i-became-a-billionaire", ignore = ["alt_titles"];
 }
 
+test_manga_mod! {
+    weebcentral,
+    weebcentral: "https://weebcentral.com/series/01K8B4TXH0C9WXKXN13NGXM9G1/last-boss-toubatsugo-ni-hajimeru-nishuume-boukensha-life";
+}
+
 /// Ignored may be
 /// - genres
 /// - authors
