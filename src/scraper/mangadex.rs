@@ -162,6 +162,7 @@ impl MangaScraper for MangaDex {
                 .attributes
                 .title
                 .get(&Language::English)
+                .or_else(|| manga.attributes.title.values().next())
                 .ok_or(ScrapeError::MissingMangaTitle)?
                 .to_owned(),
             description: manga
