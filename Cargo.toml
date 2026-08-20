@@ -20,17 +20,17 @@ itertools = "0"
 convert_case = "0"
 reqwest = { version = "0.12", features = ["cookies", "json"] }
 http-cache-reqwest = "0"
-reqwest-middleware = "0"
-reqwest-retry = "0"
+reqwest-middleware = "0.4"
+reqwest-retry = "0.7"
 fake_user_agent = "0"
 task-local-extensions = "0"
 anyhow = "1"
 log = "0"
 simple-builder = { git = "https://github.com/hubble459/simple-builder.git" }
-strum = { version = "0.27", features = ["derive"] }
-mangadex-api = { version = "3.3", features = ["multi-thread"] }
-mangadex-api-types-rust = "0.10"
-mangadex-api-schema-rust = "0.10"
+strum = { version = "0.28", features = ["derive"] }
+mangadex-api = "4.2"
+mangadex-api-types-rust = "1.0"
+mangadex-api-schema-rust = "1.1"
 uuid = { version = "1.8", features = ["serde", "v4"] }
 
 [features]
