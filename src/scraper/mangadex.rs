@@ -274,6 +274,7 @@ impl MangaScraper for MangaDex {
                     .attributes
                     .title
                     .get(&Language::English)
+                    .or_else(|| m.attributes.title.values().next())
                     .unwrap_or(&"No title".to_owned())
                     .to_owned(),
                 posted: m
