@@ -59,17 +59,39 @@ manga:
   alt_titles: div.summary-heading:has('h5:icontains("alternative")') + div
 
   chapter:
-    base: li.wp-manga-chapter
-    title: a
+    base:
+      - li.wp-manga-chapter
+      - div.json-item
+    title:
+      - a
+      - selector: div.json-item
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - data-chapter_name
     url:
-      selector: a
-      options:
-        text_selection:
-          type: attributes
-          attributes:
-            - href
-            - src
-    number: span.chapter-number
+      - selector: a
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - href
+              - src
+      - selector: div.json-item
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - data-__url
+    number:
+      - span.chapter-number
+      - selector: div.json-item
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - data-chapter_num
     date:
       - span.chapter-release-date i
       - selector: span.chapter-release-date a
@@ -78,6 +100,12 @@ manga:
             type: attributes
             attributes:
               - title
+      - selector: div.json-item
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - data-updated_at
 
     fetch_external:
       - id: script:icontains('mangaid')
@@ -106,6 +134,12 @@ manga:
         url: "{url}ajax/chapters/"
         method: post
 
+      - id: script:icontains('comicSlug')
+        regex: comicSlug = '(?<id>[^']+)';
+        url: "https://{host}/api/comics/{id}/chapters"
+        json_array: /data/chapters
+        json_url_template: "{url}/{chapter_slug}"
+
 images:
   image_selector:
     - selector: img.wp-manga-chapter-img, li.blocks-gallery-item img, div.reading-content div.text-left img
@@ -126,9 +160,8 @@ search:
       - manga68.com
       - manhuaplus.com
       - manhwatop.com
-      - s2manga.com
       - manhuafast.com
-    search_url: "{hostname}/search?s={query}"
+    search_url: "{hostname}/?s={query}&post_type=wp-manga"
     query_format:
       - replace_regex: '\+'
         replace_with: "%2B"

@@ -107,6 +107,24 @@ $defs:
           enum:
             - get
             - post
+        json_array:
+          type: string
+          description:
+            RFC 6901 JSON Pointer (e.g. "/data/chapters") to an array
+            within the fetched response. When set, the response is parsed
+            as JSON instead of HTML: each array element (must be a JSON
+            object) is flattened into a synthetic `<div class="json-item">`
+            element with one data-<key> attribute per scalar field, so
+            existing selectors below can read them via text_selection
+            type "attributes" as normal.
+        json_url_template:
+          type: string
+          description:
+            Only used together with json_array, for JSON APIs that don't
+            already include a directly usable URL/path. A template string
+            using {host}/{url} (same as the url field above) plus
+            {<field>} placeholders for this item's own flattened fields.
+            The computed result is exposed as attribute data-__url.
   search:
     type: array
     items:
@@ -126,6 +144,18 @@ $defs:
             - '"{host}/search?q={query}"'
         query_format:
           $ref: 'string_selector.schema.yaml#$defs/cleanup'
+        json_array:
+          type: string
+          description:
+            RFC 6901 JSON Pointer (e.g. "/data/results") to an array
+            within the fetched search response. When set, the response is
+            parsed as JSON instead of HTML and flattened into synthetic
+            elements the same way as fetch_external's json_array does.
+        json_url_template:
+          type: string
+          description:
+            Only used together with json_array. See fetch_external's
+            json_url_template for the placeholder syntax.
         selectors:
           type: object
           required:

@@ -23,4 +23,17 @@ pub struct SearchConfig {
     #[serde(default)]
     pub query_format: Vec<CleanupOption>,
     pub selectors: SearchSelectors,
+    /// RFC 6901 JSON Pointer (e.g. "/data/results") to an array within the
+    /// fetched search response. When set, the response is parsed as JSON
+    /// instead of HTML and flattened into synthetic elements — see
+    /// `util::json::flatten_json_array_to_html`.
+    #[serde(default)]
+    pub json_array: Option<String>,
+    /// Only used together with `json_array`, for JSON APIs that don't
+    /// already include a directly usable URL/path. A template using
+    /// `{host}`/`{url}` (search page context) plus `{<field>}`
+    /// placeholders for the item's own flattened fields. The computed
+    /// result is exposed as attribute `data-__url`.
+    #[serde(default)]
+    pub json_url_template: Option<String>,
 }

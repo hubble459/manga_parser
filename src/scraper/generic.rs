@@ -1,8 +1,9 @@
-use std::{collections::HashMap, path::Path, time::Duration};
+use std::{collections::HashMap, time::Duration};
 
 use chrono::{DateTime, Utc};
-use config::{builder::DefaultState, ConfigBuilder, File};
+use config::{builder::DefaultState, ConfigBuilder, File, FileFormat};
 use convert_case::Casing;
+use include_dir::{include_dir, Dir};
 use kuchiki::{traits::TendrilSink, NodeRef};
 use reqwest::{Body, Method, StatusCode, Url};
 
@@ -22,25 +23,30 @@ use crate::{
 
 use super::MangaScraper;
 
+// Embedded at compile time rather than read from a runtime "configs" directory - that
+// used to mean every consumer (rumgap, prior ad-hoc server copies) needed its own vendored
+// copy of these files, which drifted from this one silently. Now there's exactly one place
+// the bytes live, and any consumer gets them for free just by depending on this crate.
+static CONFIGS_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/configs");
+
 pub struct GenericScraper {
     configs: Vec<MangaScraperConfig>,
 }
 
 impl GenericScraper {
     pub fn new() -> Result<Self, ScrapeError> {
-        Self::new_with_config_path(Path::new("configs"))
-    }
-
-    pub fn new_with_config_path(path: &Path) -> Result<Self, ScrapeError> {
         let mut configs = vec![];
 
-        for file in path.read_dir()?.flatten() {
+        for file in CONFIGS_DIR.files() {
             if matches!(
                 file.path().extension().unwrap_or_default().to_str().unwrap(),
                 "yaml" | "yml"
             ) {
+                let contents = file
+                    .contents_utf8()
+                    .expect("embedded scraper config is valid UTF-8");
                 let config = ConfigBuilder::<DefaultState>::default()
-                    .add_source(File::from(file.path()))
+                    .add_source(File::from_str(contents, FileFormat::Yaml))
                     .build()?;
                 let manga_config = config.try_deserialize::<MangaScraperConfig>()?;
 
@@ -48,6 +54,10 @@ impl GenericScraper {
             }
         }
         Ok(Self { configs })
+    }
+
+    pub fn configs(&self) -> &[MangaScraperConfig] {
+        &self.configs
     }
 
     fn select_required_url(
@@ -214,7 +224,20 @@ impl GenericScraper {
         let search_url = Url::parse(&search_url).map_err(|e| ScrapeError::NotAValidURL(e.to_string()))?;
         debug!("[SEARCH]: Search URL is {}", search_url.to_string());
 
-        let (doc, ..) = fetch_doc_config(&search_url, Method::GET, None::<String>).await?;
+        let doc = if let Some(json_array) = &search_config.json_array {
+            let (json, ..) = fetch_json_config(&search_url, Method::GET, None::<String>).await?;
+            let html = crate::util::json::flatten_json_array_to_html(
+                &json,
+                json_array,
+                search_config.json_url_template.as_deref(),
+                hostname,
+                search_url.as_str(),
+            )?;
+            html_to_doc(&html)?
+        } else {
+            let (doc, ..) = fetch_doc_config(&search_url, Method::GET, None::<String>).await?;
+            doc
+        };
 
         let elements = {
             let mut elements: Option<kuchiki::iter::Select<kuchiki::iter::Elements<kuchiki::iter::Descendants>>> = None;
@@ -280,14 +303,26 @@ impl GenericScraper {
                     let chapter_url = chapter_url.replace("{host}", hostname);
                     let chapter_url = chapter_url.replace("{url}", url.as_str());
                     debug!("[external] URL is {}", chapter_url);
-                    if let Ok(url) = url.join(&chapter_url) {
+                    if let Ok(chapter_url) = url.join(&chapter_url) {
                         debug!("[external] Full URL is {}", chapter_url);
                         let method = match ext_fetch.method.as_str() {
                             "post" => Method::POST,
                             _ => Method::GET,
                         };
-                        let (chapter_doc, ..) = fetch_doc_config(&url, method, None::<String>).await?;
-                        doc = chapter_doc;
+                        doc = if let Some(json_array) = &ext_fetch.json_array {
+                            let (json, ..) = fetch_json_config(&chapter_url, method, None::<String>).await?;
+                            let html = crate::util::json::flatten_json_array_to_html(
+                                &json,
+                                json_array,
+                                ext_fetch.json_url_template.as_deref(),
+                                hostname,
+                                url.as_str(),
+                            )?;
+                            html_to_doc(&html)?
+                        } else {
+                            let (chapter_doc, ..) = fetch_doc_config(&chapter_url, method, None::<String>).await?;
+                            chapter_doc
+                        };
                         break;
                     }
                 }
@@ -627,7 +662,7 @@ fn html_to_doc(html: &str) -> Result<NodeRef, ScrapeError> {
     Ok(doc)
 }
 
-async fn fetch_doc_config<T>(url: &Url, method: Method, body: Option<T>) -> Result<(NodeRef, Url), ScrapeError>
+async fn fetch_text_config<T>(url: &Url, method: Method, body: Option<T>) -> Result<(String, Url), ScrapeError>
 where
     T: Into<Body>,
 {
@@ -655,8 +690,26 @@ where
     };
 
     let url = response.url().clone();
-    let html = response.text().await?;
+    let text = response.text().await?;
+    Ok((text, url))
+}
+
+async fn fetch_doc_config<T>(url: &Url, method: Method, body: Option<T>) -> Result<(NodeRef, Url), ScrapeError>
+where
+    T: Into<Body>,
+{
+    let (html, url) = fetch_text_config(url, method, body).await?;
     Ok((html_to_doc(&html)?, url))
+}
+
+async fn fetch_json_config<T>(url: &Url, method: Method, body: Option<T>) -> Result<(serde_json::Value, Url), ScrapeError>
+where
+    T: Into<Body>,
+{
+    let (text, url) = fetch_text_config(url, method, body).await?;
+    let json = serde_json::from_str(&text)
+        .map_err(|e| ScrapeError::WebScrapingError(format!("Failed to parse response as JSON: {e}")))?;
+    Ok((json, url))
 }
 
 async fn fetch_doc(url: &Url) -> Result<(NodeRef, Url), ScrapeError> {
