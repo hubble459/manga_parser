@@ -34,7 +34,7 @@ impl ElementsTrait for kuchiki::NodeRef {
     fn own_text(&self) -> String {
         self.children()
             .text_nodes()
-            .map(|text_node| text_node.borrow().to_string())
+            .map(|text_node| text_node.to_string())
             .join("\n")
             .trim()
             .to_string()
@@ -62,7 +62,7 @@ impl ElementsTrait for kuchiki::NodeRef {
         let cloned = self.inclusive_descendants();
         for node in cloned.into_iter() {
             if let Some(node) = node.as_element() {
-                let attributes = node.attributes.borrow();
+                let attributes = &node.attributes;
                 let val = attributes.get(attr);
                 if let Some(val) = val {
                     return Some(val.to_string());
@@ -78,7 +78,7 @@ impl ElementsTrait for kuchiki::NodeRef {
 
         for node in cloned.into_iter() {
             if let Some(node) = node.as_element() {
-                let attributes = node.attributes.borrow();
+                let attributes = &node.attributes;
                 let val = attributes.get(attr);
                 if let Some(val) = val {
                     attrs.push(val.to_string());
@@ -95,7 +95,7 @@ impl ElementsTrait for kuchiki::NodeRef {
 
         for node in cloned.into_iter() {
             if let Some(node) = node.as_element() {
-                let attributes = node.attributes.borrow();
+                let attributes = &node.attributes;
                 for attr in attrs {
                     let val = attributes.get(attr.to_string());
                     if let Some(val) = val {
@@ -124,7 +124,7 @@ impl ElementsTrait for Select<Elements<Descendants>> {
             .map(|el| {
                 let mut s = String::new();
                 for text_node in el.as_node().children().text_nodes() {
-                    s.push_str(&text_node.borrow());
+                    s.push_str(&text_node);
                 }
                 s
             })
@@ -138,7 +138,7 @@ impl ElementsTrait for Select<Elements<Descendants>> {
             .map(|el| {
                 let mut s = String::new();
                 for text_node in el.as_node().inclusive_descendants().text_nodes() {
-                    s.push_str(&text_node.borrow());
+                    s.push_str(&text_node);
                     s.push_str(join_str)
                 }
                 s
@@ -161,7 +161,7 @@ impl ElementsTrait for Select<Elements<Descendants>> {
     fn attr(&self, attr: &str) -> Option<String> {
         let cloned = self.clone();
         for node in cloned.into_iter() {
-            let attributes = node.attributes.borrow();
+            let attributes = &node.attributes;
             let val = attributes.get(attr);
             if let Some(val) = val {
                 return Some(val.to_string());
@@ -175,7 +175,7 @@ impl ElementsTrait for Select<Elements<Descendants>> {
         let mut attrs = vec![];
 
         for node in cloned.into_iter() {
-            let attributes = node.attributes.borrow();
+            let attributes = &node.attributes;
             let val = attributes.get(attr);
             if let Some(val) = val {
                 attrs.push(val.to_string());
@@ -190,7 +190,7 @@ impl ElementsTrait for Select<Elements<Descendants>> {
         let mut found_attrs = vec![];
 
         for node in cloned.into_iter() {
-            let attributes = node.attributes.borrow();
+            let attributes = &node.attributes;
             for attr in attrs {
                 let val = attributes.get(attr.to_string());
                 if let Some(val) = val {
