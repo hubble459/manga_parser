@@ -1580,14 +1580,15 @@ dependencies = [
 
 [[package]]
 name = "kuchiki"
-version = "0.8.1"
-source = "git+https://github.com/hubble459/kuchiki-pseudos.git#0ab09e2c775f7bb00e335ddac86d7b2b65212636"
+version = "0.8.2"
+source = "git+https://github.com/hubble459/kuchiki-pseudos.git#b7113148d2530099ad0c8beca772f9f66169d704"
 dependencies = [
  "cssparser",
  "html5ever",
  "indexmap",
  "matches",
  "selectors",
+ "triomphe",
 ]
 
 [[package]]
@@ -3538,9 +3539,9 @@ dependencies = [
 
 [[package]]
 name = "toml"
-version = "1.1.5+spec-1.1.0"
+version = "1.1.6+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12c0ba9680044b4ce98d391a62094047eada0d64860b80166c39f4a6b5640785"
+checksum = "920602543f0911ab71da12c50d59701da54c196d1a2bf5cb4b75667f137a406a"
 dependencies = [
  "serde_core",
  "serde_spanned",
@@ -3671,6 +3672,12 @@ dependencies = [
  "tracing-core",
  "tracing-log",
 ]
+
+[[package]]
+name = "triomphe"
+version = "0.1.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b40688ea6389c8171614b25491f71d4a27946e0c7ce2da1c6de27e25abf1a0ae"
 
 [[package]]
 name = "try-lock"
