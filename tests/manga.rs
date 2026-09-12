@@ -50,6 +50,7 @@ test_manga_mod! {
     mangasushi: "https://mangasushi.org/manga/shokei-sareta-saikyou-no-gunnyou-majutsushi-haisenkoku-no-elf-hime-to-kokka-saikensu-sokoku-yo-jama-suru-no-wa-kattedaga-sono-majutsu-tsukutta-no-ore-na-node-kikanai-ga/";
     #[ignore = "CloudflareIUAM"] manhuafast: "https://manhuafast.com/manga/descending-the-mountain-as-invincible-all-chapters/";
     manhuaplus: "https://manhuaplus.com/manga/demon-magic-emperor01/";
+    manhuaplus_video_chapters: "https://manhuaplus.com/manga/martial-peak/";
     manhwafan: "https://www.manhwafan.com/manga/dungeon-reset/", ignore = ["authors"];
 }
 

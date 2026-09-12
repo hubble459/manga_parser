@@ -150,6 +150,17 @@ images:
             - data-src
             - src
         text_split_regex: null
+    # manhuaplus.com's "manhua"/video-type chapter template (e.g. martial-peak) renders
+    # plain <img src> tags in this wrapper instead of the usual .wp-manga-chapter-img -
+    # the manga's other/older chapters still use the selector above untouched.
+    - selector: div.chapter-video-frame img
+      options:
+        text_selection:
+          type: attributes
+          attributes:
+            - data-src
+            - src
+        text_split_regex: null
     - selector: p#arraydata
       options:
         text_split_regex: ","
