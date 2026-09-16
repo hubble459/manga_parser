@@ -69,6 +69,11 @@ test_manga_mod! {
     asurascans: "https://asurascans.com/comics/absolute-regression-53fc8424";
 }
 
+test_manga_mod! {
+    mangareader,
+    hentai20: "https://hentai20.io/manga/troublesome-employee-warning-uncensored/", ignore = ["authors", "alt_titles"];
+}
+
 /// Ignored may be
 /// - genres
 /// - authors
