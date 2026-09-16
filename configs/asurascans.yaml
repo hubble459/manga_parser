@@ -1,0 +1,75 @@
+# yaml-language-server: $schema=../schema/config.schema.yaml
+name: asurascans
+
+accept:
+  hostnames:
+    - asurascans.com
+
+manga:
+  title: h1
+  description: "#description-text"
+  cover_url:
+    selector: "meta[property='og:image']"
+    options:
+      text_selection:
+        type: attributes
+        attributes:
+          - content
+  status: span.text-base.font-bold.capitalize
+  authors: "a[href*='?author=']"
+  genres: "a[href*='?genres=']"
+  alt_titles:
+    selector: "#alt-titles"
+    options:
+      text_split_regex: " • "
+
+  chapter:
+    base: div.divide-y > a
+    title: span.font-medium
+    number: span.font-medium
+    url:
+      selector: a
+      options:
+        text_selection:
+          type: attributes
+          attributes:
+            - href
+            - src
+    date: div.flex-shrink-0 span
+
+images:
+  image_selector:
+    selector: "img[data-page-index]"
+    options:
+      text_selection:
+        type: attributes
+        attributes:
+          - src
+          - data-src
+      text_split_regex: null
+
+search:
+  - hostnames:
+      - asurascans.com
+    search_url: "{hostname}/browse?search={query}"
+    selectors:
+      base: div.series-card
+      url:
+        selector: a
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - href
+              - src
+      title: h3
+      cover_url:
+        selector: img
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - src
+              - data-src
+
+date_formats: []

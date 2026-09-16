@@ -7,6 +7,7 @@ extern crate log;
 
 pub use reqwest::Url;
 
+mod dead_host_guard;
 pub mod config;
 pub mod error;
 pub mod model;
@@ -29,6 +30,10 @@ lazy_static::lazy_static! {
                 manager: CACacheManager::new("http-cacache".into(), true),
                 options: HttpCacheOptions::default(),
             }))
+            // Between the cache and the retry policy: a cache hit still serves instantly
+            // regardless of a host's dead-mark, and a host is only marked dead once the
+            // retry policy has genuinely exhausted its attempts, not on a single flaky one.
+            .with(dead_host_guard::DeadHostGuard)
             .with(RetryTransientMiddleware::new_with_policy(retry_policy))
             .with_init(|request: RequestBuilder| -> RequestBuilder {
                 request

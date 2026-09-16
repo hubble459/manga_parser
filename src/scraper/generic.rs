@@ -1,8 +1,9 @@
-use std::{collections::HashMap, ops::Deref, path::Path, time::Duration};
+use std::{collections::HashMap, time::Duration};
 
 use chrono::{DateTime, Utc};
-use config::{builder::DefaultState, ConfigBuilder, File};
+use config::{builder::DefaultState, ConfigBuilder, File, FileFormat};
 use convert_case::Casing;
+use include_dir::{include_dir, Dir};
 use kuchiki::{traits::TendrilSink, NodeRef};
 use reqwest::{Body, Method, StatusCode, Url};
 
@@ -22,25 +23,30 @@ use crate::{
 
 use super::MangaScraper;
 
+// Embedded at compile time rather than read from a runtime "configs" directory - that
+// used to mean every consumer (rumgap, prior ad-hoc server copies) needed its own vendored
+// copy of these files, which drifted from this one silently. Now there's exactly one place
+// the bytes live, and any consumer gets them for free just by depending on this crate.
+static CONFIGS_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/configs");
+
 pub struct GenericScraper {
     configs: Vec<MangaScraperConfig>,
 }
 
 impl GenericScraper {
     pub fn new() -> Result<Self, ScrapeError> {
-        Self::new_with_config_path(Path::new("configs"))
-    }
-
-    pub fn new_with_config_path(path: &Path) -> Result<Self, ScrapeError> {
         let mut configs = vec![];
 
-        for file in path.read_dir()?.flatten() {
+        for file in CONFIGS_DIR.files() {
             if matches!(
                 file.path().extension().unwrap_or_default().to_str().unwrap(),
                 "yaml" | "yml"
             ) {
+                let contents = file
+                    .contents_utf8()
+                    .expect("embedded scraper config is valid UTF-8");
                 let config = ConfigBuilder::<DefaultState>::default()
-                    .add_source(File::from(file.path()))
+                    .add_source(File::from_str(contents, FileFormat::Yaml))
                     .build()?;
                 let manga_config = config.try_deserialize::<MangaScraperConfig>()?;
 
@@ -50,11 +56,15 @@ impl GenericScraper {
         Ok(Self { configs })
     }
 
+    pub fn configs(&self) -> &[MangaScraperConfig] {
+        &self.configs
+    }
+
     fn select_required_url(
         &self,
         url: &Url,
         selector: &StringSelectors,
-        doc: DocWrapper,
+        doc: NodeRef,
     ) -> Result<reqwest::Url, ScrapeError> {
         self.select_url(url, selector, doc)?
             .ok_or(ScrapeError::WebScrapingError(format!(
@@ -67,7 +77,7 @@ impl GenericScraper {
         &self,
         url: &Url,
         selector: &StringSelectors,
-        doc: DocWrapper,
+        doc: NodeRef,
     ) -> Result<Option<reqwest::Url>, ScrapeError> {
         let url_string = self.select_string(selector, doc)?;
         if let Some(url_string) = url_string {
@@ -80,7 +90,7 @@ impl GenericScraper {
         }
     }
 
-    fn select_required_string(&self, selector: &StringSelectors, doc: DocWrapper) -> Result<String, ScrapeError> {
+    fn select_required_string(&self, selector: &StringSelectors, doc: NodeRef) -> Result<String, ScrapeError> {
         self.select_string(selector, doc)?
             .ok_or(ScrapeError::WebScrapingError(format!(
                 "Missing required field with selectors: {:?}",
@@ -88,7 +98,7 @@ impl GenericScraper {
             )))
     }
 
-    fn select_string(&self, selectors: &StringSelectors, doc: DocWrapper) -> Result<Option<String>, ScrapeError> {
+    fn select_string(&self, selectors: &StringSelectors, doc: NodeRef) -> Result<Option<String>, ScrapeError> {
         for selector in &selectors.selectors {
             let elements = doc
                 .select(&selector.selector)
@@ -129,7 +139,7 @@ impl GenericScraper {
         Ok(None)
     }
 
-    fn select_string_array(&self, selectors: &ArraySelectors, doc: DocWrapper) -> Result<Vec<String>, ScrapeError> {
+    fn select_string_array(&self, selectors: &ArraySelectors, doc: NodeRef) -> Result<Vec<String>, ScrapeError> {
         for selector in &selectors.selectors {
             let elements = doc
                 .select(&selector.selector)
@@ -214,7 +224,20 @@ impl GenericScraper {
         let search_url = Url::parse(&search_url).map_err(|e| ScrapeError::NotAValidURL(e.to_string()))?;
         debug!("[SEARCH]: Search URL is {}", search_url.to_string());
 
-        let (doc, ..) = fetch_doc_config(&search_url, Method::GET, None::<String>).await?;
+        let doc = if let Some(json_array) = &search_config.json_array {
+            let (json, ..) = fetch_json_config(&search_url, Method::GET, None::<String>).await?;
+            let html = crate::util::json::flatten_json_array_to_html(
+                &json,
+                json_array,
+                search_config.json_url_template.as_deref(),
+                hostname,
+                search_url.as_str(),
+            )?;
+            html_to_doc(&html)?
+        } else {
+            let (doc, ..) = fetch_doc_config(&search_url, Method::GET, None::<String>).await?;
+            doc
+        };
 
         let elements = {
             let mut elements: Option<kuchiki::iter::Select<kuchiki::iter::Elements<kuchiki::iter::Descendants>>> = None;
@@ -234,28 +257,20 @@ impl GenericScraper {
 
         for element in elements {
             search_results.push(SearchManga {
-                url: self.select_required_url(
-                    &search_url,
-                    &search_config.selectors.url,
-                    DocWrapper(element.as_node().clone()),
-                )?,
-                title: self
-                    .select_required_string(&search_config.selectors.title, DocWrapper(element.as_node().clone()))?,
+                url: self.select_required_url(&search_url, &search_config.selectors.url, element.as_node().clone())?,
+                title: self.select_required_string(&search_config.selectors.title, element.as_node().clone())?,
                 cover_url: search_config
                     .selectors
                     .cover_url
                     .as_ref()
-                    .and_then(|selector| {
-                        self.select_url(&search_url, selector, DocWrapper(element.as_node().clone()))
-                            .ok()
-                    })
+                    .and_then(|selector| self.select_url(&search_url, selector, element.as_node().clone()).ok())
                     .flatten(),
                 posted: search_config
                     .selectors
                     .posted
                     .as_ref()
                     .and_then(|selector| {
-                        self.select_date(&config.date_formats, selector, DocWrapper(element.as_node().clone()))
+                        self.select_date(&config.date_formats, selector, element.as_node().clone())
                             .ok()
                     })
                     .flatten(),
@@ -268,9 +283,9 @@ impl GenericScraper {
     async fn fetch_external(
         &self,
         url: &Url,
-        mut doc: DocWrapper,
+        mut doc: NodeRef,
         fetch_external: &[FetchExternal],
-    ) -> Result<DocWrapper, ScrapeError> {
+    ) -> Result<NodeRef, ScrapeError> {
         for ext_fetch in fetch_external {
             let hostname = url.host_str().unwrap();
             debug!(
@@ -288,14 +303,26 @@ impl GenericScraper {
                     let chapter_url = chapter_url.replace("{host}", hostname);
                     let chapter_url = chapter_url.replace("{url}", url.as_str());
                     debug!("[external] URL is {}", chapter_url);
-                    if let Ok(url) = url.join(&chapter_url) {
+                    if let Ok(chapter_url) = url.join(&chapter_url) {
                         debug!("[external] Full URL is {}", chapter_url);
                         let method = match ext_fetch.method.as_str() {
                             "post" => Method::POST,
                             _ => Method::GET,
                         };
-                        let (chapter_doc, ..) = fetch_doc_config(&url, method, None::<String>).await?;
-                        doc = chapter_doc;
+                        doc = if let Some(json_array) = &ext_fetch.json_array {
+                            let (json, ..) = fetch_json_config(&chapter_url, method, None::<String>).await?;
+                            let html = crate::util::json::flatten_json_array_to_html(
+                                &json,
+                                json_array,
+                                ext_fetch.json_url_template.as_deref(),
+                                hostname,
+                                url.as_str(),
+                            )?;
+                            html_to_doc(&html)?
+                        } else {
+                            let (chapter_doc, ..) = fetch_doc_config(&chapter_url, method, None::<String>).await?;
+                            chapter_doc
+                        };
                         break;
                     }
                 }
@@ -309,7 +336,7 @@ impl GenericScraper {
         &self,
         url: &Url,
         config: &MangaScraperConfig,
-        doc: DocWrapper,
+        doc: NodeRef,
     ) -> Result<Vec<Chapter>, ScrapeError> {
         let chapter_config = &config.manga.chapter;
 
@@ -332,26 +359,22 @@ impl GenericScraper {
         let mut chapters = vec![];
         let total_chapters = elements.len();
         for (index, element) in elements.enumerate() {
-            let title = self.select_required_string(&chapter_config.title, DocWrapper(element.as_node().clone()))?;
+            let title = self.select_required_string(&chapter_config.title, element.as_node().clone())?;
             let number_text = chapter_config
                 .number
                 .as_ref()
-                .and_then(|selector| {
-                    self.select_string(selector, DocWrapper(element.as_node().clone()))
-                        .ok()
-                        .flatten()
-                })
+                .and_then(|selector| self.select_string(selector, element.as_node().clone()).ok().flatten())
                 .unwrap_or_else(|| title.clone());
 
             chapters.push(Chapter {
-                url: self.select_required_url(url, &chapter_config.url, DocWrapper(element.as_node().clone()))?,
+                url: self.select_required_url(url, &chapter_config.url, element.as_node().clone())?,
                 title,
                 number: crate::util::number::try_parse_number(&number_text).unwrap_or((total_chapters - index) as f32),
                 date: chapter_config
                     .date
                     .as_ref()
                     .and_then(|selector| {
-                        self.select_date(&config.date_formats, selector, DocWrapper(element.as_node().clone()))
+                        self.select_date(&config.date_formats, selector, element.as_node().clone())
                             .ok()
                     })
                     .flatten(),
@@ -365,13 +388,13 @@ impl GenericScraper {
         &self,
         date_formats: &[String],
         selector: &StringSelectors,
-        doc: DocWrapper,
+        doc: NodeRef,
     ) -> Result<Option<DateTime<Utc>>, ScrapeError> {
         let text = self.select_required_string(selector, doc)?;
         Ok(crate::util::date::try_parse_date(&text, date_formats))
     }
 
-    async fn images(&self, url: Url, config: &MangaScraperConfig, doc: DocWrapper) -> Result<Vec<Url>, ScrapeError> {
+    async fn images(&self, url: Url, config: &MangaScraperConfig, doc: NodeRef) -> Result<Vec<Url>, ScrapeError> {
         debug!("[images] parsing images for {}", url.as_str());
 
         let doc = self.fetch_external(&url, doc, &config.images.fetch_external).await?;
@@ -396,7 +419,7 @@ impl GenericScraper {
         &self,
         url: Url,
         config: &MangaScraperConfig,
-        doc: DocWrapper,
+        doc: NodeRef,
         manga_builder: &'a mut MangaBuilder,
     ) -> Result<&'a mut MangaBuilder, ScrapeError> {
         debug!("[manga] parsing manga at {}", url.as_str());
@@ -491,7 +514,7 @@ impl GenericScraper {
         accepted_configs
     }
 
-    fn get_configs_for_url(&self, url: &Url, doc: DocWrapper) -> Vec<&MangaScraperConfig> {
+    fn get_configs_for_url(&self, url: &Url, doc: NodeRef) -> Vec<&MangaScraperConfig> {
         let hostname = url.host_str().unwrap().to_string();
         let mut accepted_configs = vec![];
         for config in self.configs.iter() {
@@ -633,25 +656,13 @@ impl MangaScraper for GenericScraper {
     }
 }
 
-#[derive(Clone)]
-struct DocWrapper(pub NodeRef);
-unsafe impl Send for DocWrapper {}
-unsafe impl Sync for DocWrapper {}
-impl Deref for DocWrapper {
-    type Target = NodeRef;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-fn html_to_doc(html: &str) -> Result<DocWrapper, ScrapeError> {
+fn html_to_doc(html: &str) -> Result<NodeRef, ScrapeError> {
     let doc = std::panic::catch_unwind(|| kuchiki::parse_html().one(html))
         .map_err(|_e| ScrapeError::WebScrapingError("Could not parse HTML".to_string()))?;
-    Ok(DocWrapper(doc))
+    Ok(doc)
 }
 
-async fn fetch_doc_config<T>(url: &Url, method: Method, body: Option<T>) -> Result<(DocWrapper, Url), ScrapeError>
+async fn fetch_text_config<T>(url: &Url, method: Method, body: Option<T>) -> Result<(String, Url), ScrapeError>
 where
     T: Into<Body>,
 {
@@ -679,10 +690,28 @@ where
     };
 
     let url = response.url().clone();
-    let html = response.text().await?;
+    let text = response.text().await?;
+    Ok((text, url))
+}
+
+async fn fetch_doc_config<T>(url: &Url, method: Method, body: Option<T>) -> Result<(NodeRef, Url), ScrapeError>
+where
+    T: Into<Body>,
+{
+    let (html, url) = fetch_text_config(url, method, body).await?;
     Ok((html_to_doc(&html)?, url))
 }
 
-async fn fetch_doc(url: &Url) -> Result<(DocWrapper, Url), ScrapeError> {
+async fn fetch_json_config<T>(url: &Url, method: Method, body: Option<T>) -> Result<(serde_json::Value, Url), ScrapeError>
+where
+    T: Into<Body>,
+{
+    let (text, url) = fetch_text_config(url, method, body).await?;
+    let json = serde_json::from_str(&text)
+        .map_err(|e| ScrapeError::WebScrapingError(format!("Failed to parse response as JSON: {e}")))?;
+    Ok((json, url))
+}
+
+async fn fetch_doc(url: &Url) -> Result<(NodeRef, Url), ScrapeError> {
     fetch_doc_config(url, Method::GET, None::<String>).await
 }

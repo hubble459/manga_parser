@@ -1,3 +1,4 @@
+use futures::future::join_all;
 use reqwest::Url;
 
 use crate::{
@@ -74,14 +75,20 @@ impl MangaScraper for ScraperManager {
         query: &str,
         hostnames: &[String],
     ) -> Result<Vec<SearchManga>, ScrapeError> {
-        let mut err = None;
-        let mut search_results = vec![];
-        for hostname in hostnames {
+        // One hostname's search is independent network I/O + parsing from
+        // every other hostname's, so search them concurrently instead of
+        // one after another -- `join_all` still returns results in
+        // `hostnames` order, so the merge below sees the same per-hostname
+        // outcomes (and "last error wins" precedence) as the old sequential
+        // loop would have, just without paying for each hostname's latency
+        // back-to-back.
+        let per_hostname = join_all(hostnames.iter().map(|hostname| async move {
+            let mut err = None;
+            let mut results = vec![];
             for scraper in self.scrapers.iter() {
-                if scraper.search_accepts(&hostname) {
-                    let result = scraper.search(query, &[hostname.to_string()]).await;
-                    match result {
-                        Ok(mut results) => search_results.append(&mut results),
+                if scraper.search_accepts(hostname) {
+                    match scraper.search(query, &[hostname.to_string()]).await {
+                        Ok(mut r) => results.append(&mut r),
                         Err(e) => {
                             if !matches!(e, ScrapeError::SearchNotSupported(_)) {
                                 error!("Error parsing search: {:?}", e);
@@ -90,6 +97,17 @@ impl MangaScraper for ScraperManager {
                         }
                     };
                 }
+            }
+            (results, err)
+        }))
+        .await;
+
+        let mut err = None;
+        let mut search_results = vec![];
+        for (mut results, hostname_err) in per_hostname {
+            search_results.append(&mut results);
+            if hostname_err.is_some() {
+                err = hostname_err;
             }
         }
 
