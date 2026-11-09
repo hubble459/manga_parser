@@ -15,6 +15,8 @@ pub mod scraper;
 pub mod util;
 
 lazy_static::lazy_static! {
+    static ref USER_AGENT: &'static str = fake_user_agent::get_chrome_rua();
+
     pub static ref HTTP_CLIENT: ClientWithMiddleware = {
         // Retry up to 3 times with increasing intervals between attempts.
         let retry_policy = ExponentialBackoff::builder()
@@ -37,7 +39,7 @@ lazy_static::lazy_static! {
             .with(RetryTransientMiddleware::new_with_policy(retry_policy))
             .with_init(|request: RequestBuilder| -> RequestBuilder {
                 request
-                    .header(reqwest::header::USER_AGENT, fake_user_agent::get_rua())
+                    .header(reqwest::header::USER_AGENT, *USER_AGENT)
                     .header(reqwest::header::ACCEPT, "*/*")
             })
             .build()
