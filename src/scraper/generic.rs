@@ -399,17 +399,37 @@ impl GenericScraper {
 
         let doc = self.fetch_external(&url, doc, &config.images.fetch_external).await?;
 
-        let images = self.select_string_array(&config.images.image_selector, doc)?;
-        debug!("[images] found {} images", images.len());
+        let page_urls = match &config.images.pages {
+            Some(pages) => {
+                let mut page_urls: Vec<Url> = vec![];
+                for page in self.select_string_array(pages, doc.clone())? {
+                    let page_url = url.join(&page).map_err(|e| ScrapeError::NotAValidURL(e.to_string()))?;
+                    if !page_urls.contains(&page_url) {
+                        page_urls.push(page_url);
+                    }
+                }
+                page_urls
+            }
+            None => vec![],
+        };
 
-        let images = images
-            .into_iter()
-            .map(|url_string| {
-                url.join(&url_string)
-                    .map_err(|e| ScrapeError::NotAValidURL(e.to_string()))
-            })
-            .collect::<Result<Vec<Url>, ScrapeError>>()?;
-
+        let images = if page_urls.is_empty() {
+            self.select_string_array(&config.images.image_selector, doc)?
+                .into_iter()
+                .map(|image| url.join(&image).map_err(|e| ScrapeError::NotAValidURL(e.to_string())))
+                .collect::<Result<Vec<Url>, ScrapeError>>()?
+        } else {
+            debug!("[images] fetching {} reader pages", page_urls.len());
+            let pages = futures::future::try_join_all(page_urls.into_iter().map(|page_url| async move {
+                let (page_doc, page_url) = fetch_doc(&page_url).await?;
+                self.select_string_array(&config.images.image_selector, page_doc)?
+                    .into_iter()
+                    .map(|image| page_url.join(&image).map_err(|e| ScrapeError::NotAValidURL(e.to_string())))
+                    .collect::<Result<Vec<Url>, ScrapeError>>()
+            }))
+            .await?;
+            pages.into_iter().flatten().collect()
+        };
         debug!("[images] parsed {} images to URLs", images.len());
 
         Ok(images)

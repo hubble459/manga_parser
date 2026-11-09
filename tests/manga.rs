@@ -74,6 +74,11 @@ test_manga_mod! {
     hentai20: "https://hentai20.io/manga/troublesome-employee-warning-uncensored/", ignore = ["authors", "alt_titles"];
 }
 
+test_manga_mod! {
+    mangatown,
+    mangatown: "https://www.mangatown.com/manga/berserk_of_gluttony/";
+}
+
 /// Ignored may be
 /// - genres
 /// - authors
