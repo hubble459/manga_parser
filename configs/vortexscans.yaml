@@ -21,11 +21,12 @@ manga:
     options:
       unique: true
   genres: a[itemprop='genre']
-  # One per line on some series, comma separated on others.
+  # One per line on some series, separated by ", " or " / " on others. A "/"
+  # without spaces (Fate/stay night) is part of a title.
   alt_titles:
     selector: div.invisible[aria-hidden='true'] + div
     options:
-      text_split_regex: '\s*\n\s*|, '
+      text_split_regex: '\s*\n\s*|, |\s+/\s+'
       unique: true
 
   # The page only links the newest ~25 chapters; the full list is in the

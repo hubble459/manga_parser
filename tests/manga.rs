@@ -73,6 +73,7 @@ test_manga_mod! {
 test_manga_mod! {
     vortexscans,
     vortexscans: "https://vortexscans.org/series/necromancer-academy";
+    vortexscans_slash_separated_alt_titles: "https://vortexscans.org/series/survival-story-of-a-sword-king-in-a-fantasy-world";
 }
 
 test_manga_mod! {
