@@ -104,6 +104,12 @@ $defs:
         description: CSS selector for the element holding the serialized state
         examples:
           - script#it-astro-state
+      unpack:
+        enum:
+          - packer
+        description:
+          Decode the element's text before format reads it. packer is Dean
+          Edwards' eval(function(p,a,c,k,e,d)...) JavaScript packer.
       format:
         default: json
         enum:

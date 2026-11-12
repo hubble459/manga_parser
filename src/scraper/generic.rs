@@ -10,7 +10,7 @@ use reqwest::{Body, Method, StatusCode, Url};
 use crate::{
     config::{
         array_selector::ArraySelectors,
-        chapter::{EmbeddedJson, EmbeddedJsonFormat, FetchExternal},
+        chapter::{EmbeddedJson, EmbeddedJsonFormat, EmbeddedUnpack, FetchExternal},
         string_selector::StringSelectors,
         string_selector_options::{self, StringSelection},
         MangaScraperConfig,
@@ -701,6 +701,10 @@ fn embedded_json_doc(url: &Url, doc: &NodeRef, embedded: &EmbeddedJson) -> Resul
         .select_first(&embedded.selector)
         .map_err(|_| ScrapeError::WebScrapingError(format!("Embedded JSON '{}' not found", embedded.selector)))?;
     let text = element.text_contents();
+    let text = match embedded.unpack {
+        Some(EmbeddedUnpack::Packer) => crate::util::packer::unpack(&text)?,
+        None => text,
+    };
     let json = match embedded.format {
         EmbeddedJsonFormat::Json => serde_json::from_str(&text)
             .map_err(|e| ScrapeError::WebScrapingError(format!("Invalid embedded JSON: {e}")))?,

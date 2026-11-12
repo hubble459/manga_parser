@@ -1,0 +1,92 @@
+# yaml-language-server: $schema=../schema/config.schema.yaml
+# MangaFox's mobile site. (m.fanfox.net is a different, older layout.)
+name: fanfox
+
+accept:
+  hostnames:
+    - newm.fanfox.net
+
+manga:
+  title: p.detail-top-bar-info-title
+  description:
+    - selector: div.detail-text-bar p.fullcontent
+    - selector: div.detail-text-bar p
+      options:
+        text_selection:
+          type: own-text
+  cover_url:
+    selector: div.detail-top-bar-cover img
+    options:
+      text_selection:
+        type: attributes
+        attributes:
+          - src
+  # "Ongoing (192)" / "Completed (..)": the tab above the chapter list.
+  status:
+    selector: a#tab-1
+    options:
+      text_selection:
+        type: own-text
+  authors: div.detail-author-bar a
+  genres: div.detail-tag-bar a
+
+  # No posted dates on the mobile site.
+  chapter:
+    base: div.detail-chapters-list a
+    title: a
+    url:
+      selector: a
+      options:
+        text_selection:
+          type: attributes
+          attributes:
+            - href
+
+images:
+  # The reader has no <img>s: all page URLs are in a packed
+  # eval(function(p,a,c,k,e,d)...) script as `var newImgs=['//...',...]`.
+  # They carry a token that expires after about a day.
+  embedded_json:
+    selector: script:contains('eval(function(p,a,c,k,e,d)')
+    unpack: packer
+    format: regex
+    item_regex: '''(?<url>//[^'']+\.(?:jpe?g|png|webp|gif)(?:\?[^'']*)?)'''
+  image_selector:
+    selector: div.json-item
+    options:
+      text_selection:
+        type: attributes
+        attributes:
+          - data-url
+      text_split_regex: null
+
+search:
+  - hostnames:
+      - newm.fanfox.net
+    search_url: "{hostname}/search?title={query}"
+    query_format:
+      - replace_regex: '\+'
+        replace_with: "%2B"
+      - replace_regex: "&"
+        replace_with: "%26"
+      - replace_regex: " "
+        replace_with: "+"
+    selectors:
+      base: ul.manga-list-2 > li
+      url:
+        selector: p.manga-list-2-title a
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - href
+      title: p.manga-list-2-title a
+      cover_url:
+        selector: img.manga-list-2-cover-img
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - src
+
+date_formats: []

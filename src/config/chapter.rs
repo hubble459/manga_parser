@@ -25,6 +25,9 @@ pub struct Chapter {
 pub struct EmbeddedJson {
     /// CSS selector for the element holding the serialized state.
     pub selector: String,
+    /// Decodes the element's text before `format` reads it.
+    #[serde(default)]
+    pub unpack: Option<EmbeddedUnpack>,
     #[serde(default)]
     pub format: EmbeddedJsonFormat,
     /// RFC 6901 JSON Pointer to the array within the decoded state (`/` in a
@@ -53,6 +56,15 @@ pub enum EmbeddedJsonFormat {
     /// State that is neither JSON nor devalue (e.g. TanStack Start's seroval
     /// stream, a JS expression): items are pulled out with `item_regex`.
     Regex,
+}
+
+#[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Deserialize, Clone, Copy)]
+#[serde(rename_all = "lowercase")]
+pub enum EmbeddedUnpack {
+    /// Dean Edwards' `eval(function(p,a,c,k,e,d)...)` packer -- see
+    /// `util::packer`.
+    Packer,
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]

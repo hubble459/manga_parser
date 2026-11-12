@@ -85,6 +85,12 @@ test_manga_mod! {
     mangatown: "https://www.mangatown.com/manga/berserk_of_gluttony/";
 }
 
+test_manga_mod! {
+    fanfox,
+    // The mobile site shows no posted dates or alternative titles.
+    fanfox: "https://newm.fanfox.net/manga/spirit_farmer/", ignore = ["chapter_date", "alt_titles"];
+}
+
 /// Ignored may be
 /// - genres
 /// - authors

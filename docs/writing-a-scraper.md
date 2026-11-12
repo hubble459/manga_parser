@@ -526,6 +526,28 @@ chapter:
 Keep the regex anchored to one object (`[^{}]*?` rather than `.*?`) so a
 match can't run on into the next item. See `configs/vortexscans.yaml`.
 
+Some readers hide their image list in a script compressed with Dean
+Edwards' packer (`eval(function(p,a,c,k,e,d){...}('...',62,123,'...'.split('|'),0,{}))`).
+`unpack: packer` decodes the element's text first (word substitution only,
+no JavaScript runs; `src/util/packer.rs`), so `format: regex` can then pull
+the URLs out of the plain code:
+
+```yaml
+images:
+  embedded_json:
+    selector: script:contains('eval(function(p,a,c,k,e,d)')
+    unpack: packer
+    format: regex
+    item_regex: '''(?<url>//[^'']+\.(?:jpe?g|png|webp|gif)(?:\?[^'']*)?)'''
+  image_selector:
+    selector: div.json-item
+    options:
+      text_selection: { type: attributes, attributes: [data-url] }
+      text_split_regex: null
+```
+
+See `configs/fanfox.yaml`.
+
 ## The `images` block
 
 ```yaml
