@@ -117,6 +117,10 @@ impl MangaScraper for ScraperManager {
         hostnames
     }
 
+    fn nsfw_hostnames(&self) -> Vec<String> {
+        self.scrapers.iter().flat_map(|scraper| scraper.nsfw_hostnames()).collect()
+    }
+
     fn search_accepts(&self, hostname: &str) -> bool {
         self.searchable_hostnames().binary_search(&hostname.to_string()).is_ok()
     }

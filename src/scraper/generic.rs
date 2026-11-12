@@ -613,7 +613,7 @@ impl MangaScraper for GenericScraper {
                 .full_manga(url.clone(), config, doc.clone(), &mut manga_builder)
                 .await
             {
-                Ok(manga_builder) => match manga_builder.build() {
+                Ok(manga_builder) => match manga_builder.nsfw(config.nsfw).build() {
                     Ok(manga) => return Ok(manga),
                     Err(e) => {
                         errors.insert(config.name.clone(), ScrapeError::WebScrapingError(e.to_string()));
@@ -701,6 +701,14 @@ impl MangaScraper for GenericScraper {
         }
         hostnames.sort();
         hostnames
+    }
+
+    fn nsfw_hostnames(&self) -> Vec<String> {
+        self.configs
+            .iter()
+            .filter(|config| config.nsfw)
+            .flat_map(|config| config.accept.hostnames.iter().cloned())
+            .collect()
     }
 
     fn search_accepts(&self, hostname: &str) -> bool {

@@ -16,5 +16,8 @@ pub struct Manga {
     pub genres: Vec<String>,
     #[builder(default)]
     pub alternative_titles: Vec<String>,
+    /// 18+: an adult-only site (config `nsfw: true`) or a manga the site rates as adult.
+    #[builder(default)]
+    pub nsfw: bool,
     pub chapters: Vec<Chapter>,
 }

@@ -6,7 +6,7 @@ use mangadex_api::v5::schema::RelatedAttributes;
 use mangadex_api::v5::MangaDexClient;
 use mangadex_api_schema_rust::v5::ChapterObject;
 use mangadex_api_types_rust::{
-    ChapterSortOrder, IncludeFuturePublishAt, IncludeFutureUpdates, Language, MangaStatus, OrderDirection,
+    ChapterSortOrder, ContentRating, IncludeFuturePublishAt, IncludeFutureUpdates, Language, MangaStatus, OrderDirection,
     ReferenceExpansionResource, RelationshipType,
 };
 use reqwest::Url;
@@ -204,6 +204,10 @@ impl MangaScraper for MangaDex {
                 .filter(|a| a.is_some())
                 .map(|a| a.unwrap().to_owned())
                 .collect(),
+            nsfw: matches!(
+                manga.attributes.content_rating,
+                Some(ContentRating::Erotica | ContentRating::Pornographic)
+            ),
             chapters,
             is_ongoing: manga.attributes.status == MangaStatus::Ongoing,
             status: Some(format!("{:?}", manga.attributes.status)),

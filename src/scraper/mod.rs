@@ -17,4 +17,9 @@ pub trait MangaScraper: Send + Sync {
     async fn search(&self, query: &str, hostnames: &[String]) -> Result<Vec<SearchManga>, ScrapeError>;
     fn search_accepts(&self, hostname: &str) -> bool;
     fn searchable_hostnames(&self) -> Vec<String>;
+
+    /// Adult-only sites: everything scraped from them is `nsfw`.
+    fn nsfw_hostnames(&self) -> Vec<String> {
+        vec![]
+    }
 }

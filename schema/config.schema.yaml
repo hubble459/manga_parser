@@ -9,6 +9,10 @@ required:
 properties:
   name:
     type: string
+  nsfw:
+    type: boolean
+    description: An adult-only website; every manga scraped from it is marked 18+
+    default: false
   accept:
     type: object
     properties:

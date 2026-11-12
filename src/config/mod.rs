@@ -22,6 +22,9 @@ pub struct MangaScraperConfig {
     #[serde(default)]
     pub search: Vec<SearchConfig>,
     pub date_formats: Vec<String>,
+    /// An adult-only site: every manga scraped with this config is marked `nsfw`.
+    #[serde(default)]
+    pub nsfw: bool,
 }
 
 #[cfg(test)]
