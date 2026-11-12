@@ -5,6 +5,7 @@ use config::{builder::DefaultState, ConfigBuilder, File, FileFormat};
 use convert_case::Casing;
 use include_dir::{include_dir, Dir};
 use kuchiki::{traits::TendrilSink, NodeRef};
+use http_cache_reqwest::CacheMode;
 use reqwest::{Method, StatusCode, Url};
 
 use crate::{
@@ -636,7 +637,16 @@ impl MangaScraper for GenericScraper {
     }
 
     async fn chapter_images(&self, chapter_url: &Url) -> Result<Vec<Url>, ScrapeError> {
-        let (doc, url) = fetch_doc(chapter_url).await?;
+        let (mut doc, mut url) = fetch_doc(chapter_url).await?;
+        if url != *chapter_url && is_login_page(&url) {
+            // The cache keeps the sign-in page under the chapter's url, so check the site
+            // itself before calling it locked: early-access chapters become public later.
+            let (html, fresh_url) = fetch_text(chapter_url, Method::GET, None, Some(CacheMode::Reload)).await?;
+            if fresh_url != *chapter_url && is_login_page(&fresh_url) {
+                return Err(ScrapeError::LoginRequired(fresh_url.host_str().unwrap_or_default().to_string()));
+            }
+            (doc, url) = (html_to_doc(&html)?, fresh_url);
+        }
         let accepted_configs = self.get_configs_for_url(&url, doc.clone());
 
         let mut errors = HashMap::<String, ScrapeError>::new();
@@ -775,11 +785,24 @@ struct RequestBody {
 }
 
 async fn fetch_text_config(url: &Url, method: Method, body: Option<RequestBody>) -> Result<(String, Url), ScrapeError> {
+    fetch_text(url, method, body, None).await
+}
+
+/// `cache_mode` overrides the client's cache mode for this one request.
+async fn fetch_text(
+    url: &Url,
+    method: Method,
+    body: Option<RequestBody>,
+    cache_mode: Option<CacheMode>,
+) -> Result<(String, Url), ScrapeError> {
     let mut request = HTTP_CLIENT
         .request(method, url.clone())
         .header("Referer", url.to_string())
         .header("Origin", url.to_string())
         .timeout(Duration::from_secs(5));
+    if let Some(cache_mode) = cache_mode {
+        request = request.with_extension(cache_mode);
+    }
 
     if let Some(body) = body {
         request = request
@@ -821,6 +844,33 @@ async fn fetch_json_config(
     Ok((json, url))
 }
 
+/// Whether a redirect landed on a sign-in page (`/login`, `/account/sign-in`, ...).
+fn is_login_page(url: &Url) -> bool {
+    url.path_segments().is_some_and(|mut segments| {
+        segments.any(|segment| {
+            matches!(
+                segment.to_lowercase().as_str(),
+                "login" | "log-in" | "signin" | "sign-in" | "sign_in"
+            )
+        })
+    })
+}
+
 async fn fetch_doc(url: &Url) -> Result<(NodeRef, Url), ScrapeError> {
     fetch_doc_config(url, Method::GET, None).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn detects_sign_in_pages() {
+        let page = |url: &str| is_login_page(&Url::parse(url).unwrap());
+        assert!(page("https://asurascans.my/account/sign-in?next=%2Fcontent%2Fx"));
+        assert!(page("https://example.com/login"));
+        assert!(page("https://example.com/user/SignIn/"));
+        assert!(!page("https://example.com/content/login-to-the-dungeon/1"));
+        assert!(!page("https://example.com/manga/x/chapter-1"));
+    }
 }

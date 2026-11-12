@@ -48,6 +48,10 @@ pub enum ScrapeError {
 
     #[error("Missing manga title")]
     MissingMangaTitle,
+
+    /// The site sent a sign-in page instead, e.g. an early-access chapter.
+    #[error("This chapter requires an account on {0}")]
+    LoginRequired(String),
 }
 
 impl serde::de::Error for ScrapeError {
