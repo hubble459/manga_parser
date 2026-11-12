@@ -148,7 +148,7 @@ $defs:
           description:
             RFC 6901 JSON Pointer (e.g. "/data/chapters") to an array
             within the fetched response. When set, the response is parsed
-            as JSON instead of HTML: each array element (must be a JSON
+            as JSON instead of HTML; each array element (must be a JSON
             object) is flattened into a synthetic `<div class="json-item">`
             element with one data-<key> attribute per scalar field, so
             existing selectors below can read them via text_selection
