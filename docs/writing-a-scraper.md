@@ -504,6 +504,24 @@ decodes it into plain JSON). HTML attribute names are lowercased, so a
 `createdAt` field is read as `data-createdat`. See
 `configs/asurascans-my.yaml` for the full example.
 
+For state that is neither JSON nor devalue — e.g. TanStack Start's
+`<script data-tsr-stream-part>`, which is a JS expression (seroval) with
+unquoted keys and `!1` for `false` — use `format: regex`. `item_regex` runs
+over the element's text, every match becomes one item whose fields are the
+regex's named groups (a group that didn't participate is left out, so
+attribute fallbacks still work), and `array` can be omitted:
+
+```yaml
+chapter:
+  embedded_json:
+    selector: script[data-tsr-stream-part]:contains('isLocked:')
+    format: regex
+    item_regex: '\{id:\d+,slug:"(?<slug>[^"]+)",number:(?<number>[\d.]+),[^{}]*?createdAt:"(?<createdat>[^"]+)"'
+    url_template: "{url}/{slug}"
+```
+
+Keep the regex anchored to one object (`[^{}]*?` rather than `.*?`) so a
+match can't run on into the next item. See `configs/vortexscans.yaml`.
 ## The `images` block
 
 ```yaml

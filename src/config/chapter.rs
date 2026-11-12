@@ -28,8 +28,14 @@ pub struct EmbeddedJson {
     #[serde(default)]
     pub format: EmbeddedJsonFormat,
     /// RFC 6901 JSON Pointer to the array within the decoded state (`/` in a
-    /// key is escaped as `~1`).
+    /// key is escaped as `~1`). Defaults to the root, which is where the
+    /// `regex` format puts its items.
+    #[serde(default)]
     pub array: String,
+    /// Only for the `regex` format: matched against the element's text, each
+    /// match becomes one item whose fields are the regex's named groups.
+    #[serde(default, with = "serde_regex")]
+    pub item_regex: Option<Regex>,
     /// Same as `FetchExternal::json_url_template`.
     #[serde(default)]
     pub url_template: Option<String>,
@@ -44,6 +50,9 @@ pub enum EmbeddedJsonFormat {
     /// `application/json+devalue`, as used by Astro and SvelteKit -- see
     /// `util::devalue`.
     Devalue,
+    /// State that is neither JSON nor devalue (e.g. TanStack Start's seroval
+    /// stream, a JS expression): items are pulled out with `item_regex`.
+    Regex,
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]

@@ -685,6 +685,26 @@ fn embedded_json_doc(url: &Url, doc: &NodeRef, embedded: &EmbeddedJson) -> Resul
         EmbeddedJsonFormat::Json => serde_json::from_str(&text)
             .map_err(|e| ScrapeError::WebScrapingError(format!("Invalid embedded JSON: {e}")))?,
         EmbeddedJsonFormat::Devalue => crate::util::devalue::parse(&text)?,
+        EmbeddedJsonFormat::Regex => {
+            let regex = embedded.item_regex.as_ref().ok_or_else(|| {
+                ScrapeError::WebScrapingError("embedded_json format 'regex' requires item_regex".to_string())
+            })?;
+            let names: Vec<&str> = regex.capture_names().flatten().collect();
+            let items = regex
+                .captures_iter(&text)
+                .map(|captures| {
+                    names
+                        .iter()
+                        .filter_map(|name| {
+                            let value = captures.name(name)?.as_str().to_string();
+                            Some((name.to_string(), serde_json::Value::String(value)))
+                        })
+                        .collect::<serde_json::Map<_, _>>()
+                        .into()
+                })
+                .collect();
+            serde_json::Value::Array(items)
+        }
     };
     let html = crate::util::json::flatten_json_array_to_html(
         &json,

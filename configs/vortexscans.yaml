@@ -1,0 +1,110 @@
+# yaml-language-server: $schema=../schema/config.schema.yaml
+name: vortexscans
+
+accept:
+  hostnames:
+    - vortexscans.org
+
+manga:
+  title: h1[itemprop='name']
+  description: "[itemprop='description']"
+  cover_url:
+    selector: img[alt^='Cover of']
+    options:
+      text_selection:
+        type: attributes
+        attributes:
+          - src
+  status: dt:contains(Status) + dd
+  authors:
+    selector: dt:contains(Author) + dd > span, dt:contains(Artist) + dd > span
+    options:
+      unique: true
+  genres: a[itemprop='genre']
+  # One per line on some series, comma separated on others.
+  alt_titles:
+    selector: div.invisible[aria-hidden='true'] + div
+    options:
+      text_split_regex: '\s*\n\s*|, '
+      unique: true
+
+  # The page only links the newest ~25 chapters; the full list is in the
+  # TanStack router state, a JS expression (seroval), not JSON. Older chapters
+  # have `title:null` and slugs with a random suffix (chapter-94-9wcbva4h).
+  chapter:
+    embedded_json:
+      selector: script[data-tsr-stream-part]:contains('isLocked:')
+      format: regex
+      item_regex: '\{id:\d+,slug:"(?<slug>[^"]+)",number:(?<number>[\d.]+),title:(?:"(?<title>(?:[^"\\]|\\.)+)"|""|null),[^{}]*?createdAt:"(?<createdat>[^"]+)"'
+      url_template: "{url}/{slug}"
+    base: div.json-item
+    title:
+      selector: div.json-item
+      options:
+        text_selection:
+          type: attributes
+          attributes:
+            - data-title
+            - data-number
+    number:
+      selector: div.json-item
+      options:
+        text_selection:
+          type: attributes
+          attributes:
+            - data-number
+    date:
+      selector: div.json-item
+      options:
+        text_selection:
+          type: attributes
+          attributes:
+            - data-createdat
+    url:
+      selector: div.json-item
+      options:
+        text_selection:
+          type: attributes
+          attributes:
+            - data-__url
+
+images:
+  image_selector:
+    selector: img[data-reader-page-image]
+    options:
+      text_selection:
+        type: attributes
+        attributes:
+          - src
+      text_split_regex: null
+
+search:
+  - hostnames:
+      - vortexscans.org
+    search_url: "{hostname}/series/?searchTerm={query}"
+    query_format:
+      - replace_regex: '\+'
+        replace_with: "%2B"
+      - replace_regex: "&"
+        replace_with: "%26"
+      - replace_regex: " "
+        replace_with: "+"
+    selectors:
+      base: div.rounded-xl.bg-card.shadow
+      url:
+        selector: a[title]
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - href
+      title: a.font-bold
+      cover_url:
+        selector: img[data-fallback-src]
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - src
+
+date_formats: []

@@ -95,7 +95,6 @@ $defs:
       against those.
     required:
       - selector
-      - array
     properties:
       selector:
         type: string
@@ -107,13 +106,24 @@ $defs:
         enum:
           - json
           - devalue
+          - regex
         description:
-          devalue is application/json+devalue, as used by Astro and SvelteKit
+          devalue is application/json+devalue, as used by Astro and
+          SvelteKit. regex pulls items out of any other text with
+          item_regex.
       array:
         type: string
+        default: ""
         description:
           RFC 6901 JSON Pointer to the array within the decoded state ("/"
-          in a key is escaped as "~1")
+          in a key is escaped as "~1"). Defaults to the root.
+      item_regex:
+        type: string
+        description:
+          Only for format regex. Matched against the element's text; each
+          match becomes one item whose fields are the named groups.
+        examples:
+          - 'slug:"(?<slug>chapter-[^"]+)",number:(?<number>[\d.]+)'
       url_template:
         type: string
         description: Same as fetch_external's json_url_template

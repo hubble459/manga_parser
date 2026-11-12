@@ -70,6 +70,11 @@ test_manga_mod! {
     asurascans: "https://asurascans.com/comics/absolute-regression-53fc8424";
 }
 
+test_manga_mod! {
+    vortexscans,
+    vortexscans: "https://vortexscans.org/series/necromancer-academy";
+}
+
 /// Ignored may be
 /// - genres
 /// - authors
