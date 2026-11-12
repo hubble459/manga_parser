@@ -123,7 +123,13 @@ impl MangaScraper for MangaDex {
                 .await
                 .map_err(|e| ScrapeError::UnknownError(Box::new(e)))?;
 
-            chapters.append(&mut results.data.clone());
+            chapters.extend(
+                results
+                    .data
+                    .iter()
+                    .filter(|chapter| chapter.attributes.external_url.is_none())
+                    .cloned(),
+            );
             total = results.total;
             offset += 100;
         }
