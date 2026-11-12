@@ -142,6 +142,19 @@ $defs:
           type: string
           examples:
             - '"{host}/search?q={query}"'
+        method:
+          type: string
+          enum:
+            - get
+            - post
+          default: get
+        body:
+          type: string
+          description:
+            Optional application/x-www-form-urlencoded request body, with
+            {query} substituted (after query_format).
+          examples:
+            - '"action=wp-manga-search-manga&title={query}"'
         query_format:
           $ref: 'string_selector.schema.yaml#$defs/cleanup'
         json_array:

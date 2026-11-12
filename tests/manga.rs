@@ -52,6 +52,7 @@ test_manga_mod! {
     manhuaplus: "https://manhuaplus.com/manga/demon-magic-emperor01/";
     manhuaplus_video_chapters: "https://manhuaplus.com/manga/martial-peak/";
     manhwafan: "https://www.manhwafan.com/manga/dungeon-reset/", ignore = ["authors"];
+    mangaread: "https://www.mangaread.org/manga/nano-machine/";
 }
 
 test_manga_mod! {

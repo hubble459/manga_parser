@@ -453,7 +453,10 @@ alternative in each list, untouched).
 `search` supports the identical `json_array`/`json_url_template` pair for
 JSON-backed search endpoints (a common pattern for WordPress "live search"
 AJAX actions), using the search page's own hostname/URL as the `{host}`/
-`{url}` context instead of a manga page's.
+`{url}` context instead of a manga page's. Those AJAX actions usually only
+read POSTed form fields, so `search` also takes `method: post` and a `body`
+(sent as `application/x-www-form-urlencoded`, with `{query}` substituted
+after `query_format`) — see mangaread.org's entry in `configs/madara.yaml`.
 
 ## The `images` block
 

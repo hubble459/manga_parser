@@ -224,8 +224,14 @@ impl GenericScraper {
         let search_url = Url::parse(&search_url).map_err(|e| ScrapeError::NotAValidURL(e.to_string()))?;
         debug!("[SEARCH]: Search URL is {}", search_url.to_string());
 
+        let method = match search_config.method.as_str() {
+            "post" => Method::POST,
+            _ => Method::GET,
+        };
+        let body = search_config.body.as_ref().map(|body| body.replace("{query}", &query));
+
         let doc = if let Some(json_array) = &search_config.json_array {
-            let (json, ..) = fetch_json_config(&search_url, Method::GET, None::<String>).await?;
+            let (json, ..) = fetch_json_config(&search_url, method, body).await?;
             let html = crate::util::json::flatten_json_array_to_html(
                 &json,
                 json_array,
@@ -235,7 +241,7 @@ impl GenericScraper {
             )?;
             html_to_doc(&html)?
         } else {
-            let (doc, ..) = fetch_doc_config(&search_url, Method::GET, None::<String>).await?;
+            let (doc, ..) = fetch_doc_config(&search_url, method, body).await?;
             doc
         };
 
@@ -673,7 +679,10 @@ where
         .timeout(Duration::from_secs(5));
 
     if let Some(body) = body {
-        request = request.body(body);
+        // Only config-driven search bodies are passed here, which are form fields.
+        request = request
+            .header(reqwest::header::CONTENT_TYPE, "application/x-www-form-urlencoded; charset=UTF-8")
+            .body(body);
     }
 
     let response = HTTP_CLIENT.execute(request.build()?).await?;

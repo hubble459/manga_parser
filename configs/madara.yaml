@@ -201,8 +201,39 @@ search:
               - data-src
               - src
       posted: div.post-on span
+  # Madara's live-search AJAX action (the header search box); JSON, no covers.
+  - hostnames:
+      - www.mangaread.org
+    search_url: "{hostname}/wp-admin/admin-ajax.php"
+    method: post
+    body: "action=wp-manga-search-manga&title={query}"
+    query_format:
+      - replace_regex: '\+'
+        replace_with: "%2B"
+      - replace_regex: "&"
+        replace_with: "%26"
+      - replace_regex: " "
+        replace_with: "+"
+    json_array: /data
+    selectors:
+      base: div.json-item
+      url:
+        selector: div.json-item
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - data-url
+      title:
+        selector: div.json-item
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - data-title
 
 date_formats:
   - "%b %e, %R"
   - "%e %B، %Y"
   - "%b-%d-%H:%M"
+  - "%d.%m.%Y"

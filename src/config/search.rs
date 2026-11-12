@@ -20,6 +20,14 @@ pub struct SearchConfig {
     #[serde(default)]
     pub hostnames: Vec<String>,
     pub search_url: String,
+    /// HTTP method for `search_url`: "get" (default) or "post".
+    #[serde(default = "default_method")]
+    pub method: String,
+    /// Optional `application/x-www-form-urlencoded` request body, with
+    /// `{query}` substituted (after `query_format`). Needed for endpoints
+    /// like WordPress' `admin-ajax.php` that only read POSTed form fields.
+    #[serde(default)]
+    pub body: Option<String>,
     #[serde(default)]
     pub query_format: Vec<CleanupOption>,
     pub selectors: SearchSelectors,
@@ -36,4 +44,8 @@ pub struct SearchConfig {
     /// result is exposed as attribute `data-__url`.
     #[serde(default)]
     pub json_url_template: Option<String>,
+}
+
+fn default_method() -> String {
+    String::from("get")
 }
