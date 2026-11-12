@@ -33,6 +33,9 @@ properties:
         $ref: "#/$defs/fetch_external"
       embedded_json:
         $ref: "#/$defs/embedded_json"
+      pages:
+        description: For paged readers (one image per page) - selects the URL of every reader page; image_selector then runs against each fetched page
+        $ref: array_selector.schema.yaml
   date_formats:
     type: array
     description: Date formats the website uses based on https://docs.rs/chrono/latest/chrono/format/strftime/index.html

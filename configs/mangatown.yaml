@@ -1,0 +1,124 @@
+# yaml-language-server: $schema=../schema/config.schema.yaml
+name: mangatown
+
+accept:
+  hostnames:
+    - www.mangatown.com
+    - mangatown.com
+
+manga:
+  title: div.article_content h1.title-top
+  description:
+    # Full summary lives in the hidden span#show; span#hide is the truncated
+    # "......MORE" teaser. own-text drops the trailing HIDE/MORE link.
+    - selector: div.detail_info span#show
+      options:
+        text_selection:
+          type: own-text
+    - selector: div.detail_info li:has('b:icontains("Summary")')
+      options:
+        text_selection:
+          type: own-text
+  cover_url:
+    selector: div.detail_info > img
+    options:
+      text_selection:
+        type: attributes
+        attributes:
+          - src
+  status:
+    # "<b>Status(s):</b>Ongoing &nbsp;<a>...</a> will coming soon"
+    selector: div.detail_info li:has('b:icontains("Status")')
+    options:
+      text_selection:
+        type: own-text
+      cleanup:
+        - replace_regex: '(?s)^\s*(\w+).*$'
+          replace_with: "$1"
+  authors: div.detail_info li:has('b:icontains("Author")') a
+  genres: div.detail_info li:has('b:icontains("Genre")') a
+  alt_titles:
+    selector: div.detail_info li:has('b:icontains("Alternative Name")')
+    options:
+      text_selection:
+        type: own-text
+      text_split_regex: '\s*;\s*'
+
+  chapter:
+    base: ul.chapter_list li
+    title: a
+    url:
+      selector: a
+      options:
+        text_selection:
+          type: attributes
+          attributes:
+            - href
+    # Titles are "<Manga Title> <number>", and manga titles can contain digits
+    # themselves, so read the number from the URL instead (/v18/c171/ -> 171).
+    number:
+      selector: a
+      options:
+        text_selection:
+          type: attributes
+          attributes:
+            - href
+        cleanup:
+          - replace_regex: '^.*/c([\d.]+)/?$'
+            replace_with: "$1"
+    date:
+      selector: span.time
+      options:
+        cleanup:
+          - replace_regex: '(?i)^(today|yesterday)\s+'
+            replace_with: ""
+
+images:
+  # Paged reader: one image per page (/c086/, /c086/2.html, ...). The page
+  # dropdown lists every page; the chapter dropdown uses change_chapter()
+  # instead, so it isn't matched here. The last option is an ad page
+  # ("featured.html") without a chapter image, so skip it.
+  pages:
+    selector: "select[onchange*='location.href'] option:not([value*='featured'])"
+    options:
+      text_selection:
+        type: attributes
+        attributes:
+          - value
+      text_split_regex: null
+  image_selector:
+    selector: div#viewer img#image
+    options:
+      text_selection:
+        type: attributes
+        attributes:
+          - src
+      text_split_regex: null
+
+search:
+  - hostnames:
+      - www.mangatown.com
+    search_url: "{hostname}/search?name={query}"
+    query_format:
+      - replace_regex: " "
+        replace_with: "+"
+    selectors:
+      base: ul.manga_pic_list li
+      url:
+        selector: p.title a
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - href
+      title: p.title a
+      cover_url:
+        selector: a.manga_cover img
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - src
+
+date_formats:
+  - "%b %d,%Y"

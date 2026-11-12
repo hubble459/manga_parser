@@ -1,0 +1,103 @@
+# yaml-language-server: $schema=../schema/config.schema.yaml
+name: mangareader
+
+accept:
+  selectors:
+    - "[src*='/themes/mangareader/']"
+    - "[href*='/themes/mangareader/']"
+  hostnames:
+    - hentai20.io
+
+manga:
+  title:
+    selector: h1.entry-title
+    options:
+      text_selection:
+        type: own-text
+  description:
+    selector: div.entry-content-single p
+    options:
+      text_selection:
+        type: all-text
+        join_with: " "
+  cover_url:
+    selector: div.thumb img
+    options:
+      text_selection:
+        type: attributes
+        attributes:
+          - data-src
+          - src
+
+  status: "table.infotable td:icontains('Status') + td"
+  authors: "table.infotable span.author i"
+  genres: div.seriestugenre a
+
+  chapter:
+    base: div#chapterlist li
+    title: span.chapternum
+    url:
+      selector: a
+      options:
+        text_selection:
+          type: attributes
+          attributes:
+            - href
+            - src
+    date: span.chapterdate
+
+images:
+  image_selector:
+    # Real <img> tags only show up when scripting is disabled: browsers (and this
+    # engine's HTML5 parser) treat <noscript> content as raw text when scripting is
+    # enabled, so the "live" #readerarea markup carries lazy-load placeholders instead
+    # of usable src/data-src attributes. The real per-page URLs are only reliably
+    # present as literal markup text inside <noscript>, so they're pulled out with a
+    # regex instead of a normal element selector.
+    - selector: div#readerarea noscript
+      options:
+        text_selection:
+          type: all-text
+          join_with: ""
+        cleanup:
+          - replace_regex: '<img[^>]*?src="([^"]*)"[^>]*?/?>'
+            replace_with: "$1|"
+          - replace_regex: "<[^>]+>"
+            replace_with: ""
+          - replace_regex: '\|\s*$'
+            replace_with: ""
+        text_split_regex: '\|\s*'
+    - selector: div#readerarea img
+      options:
+        text_selection:
+          type: attributes
+          attributes:
+            - data-src
+            - src
+        text_split_regex: null
+
+search:
+  - hostnames:
+      - hentai20.io
+    search_url: "{hostname}/?s={query}"
+    selectors:
+      base: div.bsx
+      url:
+        selector: a
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - href
+              - src
+      title: div.tt
+      cover_url:
+        selector: img
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - data-src
+              - src
+
+date_formats: []
