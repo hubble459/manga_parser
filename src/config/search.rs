@@ -23,11 +23,16 @@ pub struct SearchConfig {
     /// HTTP method for `search_url`: "get" (default) or "post".
     #[serde(default = "default_method")]
     pub method: String,
-    /// Optional `application/x-www-form-urlencoded` request body, with
-    /// `{query}` substituted (after `query_format`). Needed for endpoints
-    /// like WordPress' `admin-ajax.php` that only read POSTed form fields.
+    /// Optional request body, with `{query}` substituted (after
+    /// `query_format`). Needed for endpoints like WordPress' `admin-ajax.php`
+    /// that only read POSTed form fields, or JSON search APIs.
     #[serde(default)]
     pub body: Option<String>,
+    /// How `body` is sent: `form` (default, `x-www-form-urlencoded`) or
+    /// `json` (`application/json`, with `{query}` JSON-escaped so it can sit
+    /// inside a JSON string: `{"query":"{query}"}`).
+    #[serde(default)]
+    pub body_format: SearchBodyFormat,
     #[serde(default)]
     pub query_format: Vec<CleanupOption>,
     pub selectors: SearchSelectors,
@@ -44,6 +49,15 @@ pub struct SearchConfig {
     /// result is exposed as attribute `data-__url`.
     #[serde(default)]
     pub json_url_template: Option<String>,
+}
+
+#[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Deserialize, Default, Clone, Copy)]
+#[serde(rename_all = "lowercase")]
+pub enum SearchBodyFormat {
+    #[default]
+    Form,
+    Json,
 }
 
 fn default_method() -> String {

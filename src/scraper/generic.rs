@@ -5,12 +5,13 @@ use config::{builder::DefaultState, ConfigBuilder, File, FileFormat};
 use convert_case::Casing;
 use include_dir::{include_dir, Dir};
 use kuchiki::{traits::TendrilSink, NodeRef};
-use reqwest::{Body, Method, StatusCode, Url};
+use reqwest::{Method, StatusCode, Url};
 
 use crate::{
     config::{
         array_selector::ArraySelectors,
         chapter::{EmbeddedJson, EmbeddedJsonFormat, EmbeddedUnpack, FetchExternal},
+        search::SearchBodyFormat,
         string_selector::StringSelectors,
         string_selector_options::{self, StringSelection},
         MangaScraperConfig,
@@ -232,7 +233,20 @@ impl GenericScraper {
             "post" => Method::POST,
             _ => Method::GET,
         };
-        let body = search_config.body.as_ref().map(|body| body.replace("{query}", &query));
+        let body = search_config.body.as_ref().map(|body| match search_config.body_format {
+            SearchBodyFormat::Form => RequestBody {
+                content_type: "application/x-www-form-urlencoded; charset=UTF-8",
+                data: body.replace("{query}", &query),
+            },
+            SearchBodyFormat::Json => {
+                // A JSON string's contents, so quotes in the query can't break the body.
+                let escaped = serde_json::to_string(&query).unwrap_or_default();
+                RequestBody {
+                    content_type: "application/json",
+                    data: body.replace("{query}", &escaped[1..escaped.len() - 1]),
+                }
+            }
+        });
 
         let doc = if let Some(json_array) = &search_config.json_array {
             let (json, ..) = fetch_json_config(&search_url, method, body).await?;
@@ -320,7 +334,7 @@ impl GenericScraper {
                             _ => Method::GET,
                         };
                         doc = if let Some(json_array) = &ext_fetch.json_array {
-                            let (json, ..) = fetch_json_config(&chapter_url, method, None::<String>).await?;
+                            let (json, ..) = fetch_json_config(&chapter_url, method, None).await?;
                             let html = crate::util::json::flatten_json_array_to_html(
                                 &json,
                                 json_array,
@@ -330,7 +344,7 @@ impl GenericScraper {
                             )?;
                             html_to_doc(&html)?
                         } else {
-                            let (chapter_doc, ..) = fetch_doc_config(&chapter_url, method, None::<String>).await?;
+                            let (chapter_doc, ..) = fetch_doc_config(&chapter_url, method, None).await?;
                             chapter_doc
                         };
                         break;
@@ -746,10 +760,13 @@ fn html_to_doc(html: &str) -> Result<NodeRef, ScrapeError> {
     Ok(doc)
 }
 
-async fn fetch_text_config<T>(url: &Url, method: Method, body: Option<T>) -> Result<(String, Url), ScrapeError>
-where
-    T: Into<Body>,
-{
+/// A request body together with its `Content-Type`.
+struct RequestBody {
+    content_type: &'static str,
+    data: String,
+}
+
+async fn fetch_text_config(url: &Url, method: Method, body: Option<RequestBody>) -> Result<(String, Url), ScrapeError> {
     let mut request = HTTP_CLIENT
         .request(method, url.clone())
         .header("Referer", url.to_string())
@@ -757,10 +774,9 @@ where
         .timeout(Duration::from_secs(5));
 
     if let Some(body) = body {
-        // Only config-driven search bodies are passed here, which are form fields.
         request = request
-            .header(reqwest::header::CONTENT_TYPE, "application/x-www-form-urlencoded; charset=UTF-8")
-            .body(body);
+            .header(reqwest::header::CONTENT_TYPE, body.content_type)
+            .body(body.data);
     }
 
     let response = HTTP_CLIENT.execute(request.build()?).await?;
@@ -781,18 +797,16 @@ where
     Ok((text, url))
 }
 
-async fn fetch_doc_config<T>(url: &Url, method: Method, body: Option<T>) -> Result<(NodeRef, Url), ScrapeError>
-where
-    T: Into<Body>,
-{
+async fn fetch_doc_config(url: &Url, method: Method, body: Option<RequestBody>) -> Result<(NodeRef, Url), ScrapeError> {
     let (html, url) = fetch_text_config(url, method, body).await?;
     Ok((html_to_doc(&html)?, url))
 }
 
-async fn fetch_json_config<T>(url: &Url, method: Method, body: Option<T>) -> Result<(serde_json::Value, Url), ScrapeError>
-where
-    T: Into<Body>,
-{
+async fn fetch_json_config(
+    url: &Url,
+    method: Method,
+    body: Option<RequestBody>,
+) -> Result<(serde_json::Value, Url), ScrapeError> {
     let (text, url) = fetch_text_config(url, method, body).await?;
     let json = serde_json::from_str(&text)
         .map_err(|e| ScrapeError::WebScrapingError(format!("Failed to parse response as JSON: {e}")))?;
@@ -800,5 +814,5 @@ where
 }
 
 async fn fetch_doc(url: &Url) -> Result<(NodeRef, Url), ScrapeError> {
-    fetch_doc_config(url, Method::GET, None::<String>).await
+    fetch_doc_config(url, Method::GET, None).await
 }

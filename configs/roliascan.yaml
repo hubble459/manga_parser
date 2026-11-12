@@ -1,0 +1,144 @@
+# yaml-language-server: $schema=../schema/config.schema.yaml
+name: roliascan
+
+accept:
+  hostnames:
+    - roliascan.com
+
+manga:
+  # Mobile and desktop each have an h1; a string field would join both.
+  title: h1.line-clamp-2
+  description: "#description-content-tab p"
+  cover_url:
+    selector: img[alt^='Cover for']
+    options:
+      text_selection:
+        type: attributes
+        attributes:
+          - src
+  # The mobile info block (desktop repeats it); related-series cards further
+  # down also have span.capitalize status badges.
+  status: h1.line-clamp-2 ~ div > span.capitalize
+  # The page renders the info block twice (mobile and desktop layouts).
+  authors:
+    selector: h1 ~ div.items-center.gap-1
+    options:
+      unique: true
+  genres:
+    selector: a[href*='/tag/']
+    options:
+      unique: true
+  # Separated by " | " on some series and " / " on others; a "/" without
+  # spaces (Fate/stay night) is part of a title.
+  alt_titles:
+    selector: h1 + p
+    options:
+      text_split_regex: '\s*\|\s*|\s+/\s+'
+      unique: true
+
+  # The chapter list is loaded from a JSON endpoint by manga id. The server
+  # caps `limit` at 500, so only the newest 500 chapters of longer series.
+  chapter:
+    fetch_external:
+      - id:
+          selector: button[data-manga-id]
+          options:
+            text_selection:
+              type: attributes
+              attributes:
+                - data-manga-id
+        regex: (?<id>\d+)
+        url: /auth/manga-chapters?manga_id={id}&offset=0&limit=500&order=DESC
+        json_array: /chapters
+    base: div.json-item
+    title:
+      selector: div.json-item
+      options:
+        text_selection:
+          type: attributes
+          attributes:
+            - data-chapter
+        cleanup:
+          - replace_regex: "^"
+            replace_with: "Chapter "
+    number:
+      selector: div.json-item
+      options:
+        text_selection:
+          type: attributes
+          attributes:
+            - data-chapter
+    # Relative ("4 months ago"); the built-in parser handles those.
+    date:
+      selector: div.json-item
+      options:
+        text_selection:
+          type: attributes
+          attributes:
+            - data-date
+    url:
+      selector: div.json-item
+      options:
+        text_selection:
+          type: attributes
+          attributes:
+            - data-url
+
+images:
+  # The reader fills #chapter-images-container from this endpoint; its
+  # `images` is a plain array of URL strings (flattened as data-value).
+  fetch_external:
+    - id:
+        selector: "[data-chapter-id]"
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - data-chapter-id
+      regex: (?<id>\d+)
+      url: /auth/chapter-content?chapter_id={id}
+      json_array: /images
+  image_selector:
+    selector: div.json-item
+    options:
+      text_selection:
+        type: attributes
+        attributes:
+          - data-value
+      text_split_regex: null
+
+# The site's live search (what its search box calls).
+search:
+  - hostnames:
+      - roliascan.com
+    search_url: "{hostname}/auth/search"
+    method: post
+    body_format: json
+    body: '{"query":"{query}","limit":20}'
+    json_array: /results
+    json_url_template: "https://{host}/manga/{slug}/"
+    selectors:
+      base: div.json-item
+      url:
+        selector: div.json-item
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - data-__url
+      title:
+        selector: div.json-item
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - data-title
+      cover_url:
+        selector: div.json-item
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - data-thumbnail
+
+date_formats: []

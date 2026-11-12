@@ -28,12 +28,17 @@ pub fn flatten_json_array_to_html(
 
     let mut html = String::from("<html><body>");
     for item in array {
-        let Some(obj) = item.as_object() else {
-            continue;
-        };
-
         let mut attrs: HashMap<String, String> = HashMap::new();
-        flatten_object(obj, "", &mut attrs);
+        match item {
+            Value::Object(obj) => flatten_object(obj, "", &mut attrs),
+            // A plain value (e.g. an array of image URL strings) becomes `data-value`.
+            other => match scalar_to_string(other) {
+                Some(value) => {
+                    attrs.insert("value".to_string(), value);
+                }
+                None => continue,
+            },
+        }
 
         if let Some(template) = url_template {
             let mut computed = template.replace("{host}", host).replace("{url}", base_url);
@@ -132,6 +137,17 @@ mod test {
         let html = flatten_json_array_to_html(&json, "/items", None, "example.com", "https://example.com").unwrap();
 
         assert!(html.contains("data-tags=\"[&quot;a&quot;,&quot;b&quot;]\""));
+    }
+
+    #[test]
+    fn plain_values_become_data_value() {
+        let json = json!({"images": ["https://a/1.webp", "https://a/2.webp", null]});
+
+        let html = flatten_json_array_to_html(&json, "/images", None, "example.com", "https://example.com").unwrap();
+
+        assert!(html.contains("data-value=\"https://a/1.webp\""), "{html}");
+        assert!(html.contains("data-value=\"https://a/2.webp\""), "{html}");
+        assert_eq!(html.matches("json-item").count(), 2, "{html}");
     }
 
     #[test]

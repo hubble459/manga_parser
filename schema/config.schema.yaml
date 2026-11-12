@@ -167,9 +167,9 @@ $defs:
           description:
             RFC 6901 JSON Pointer (e.g. "/data/chapters") to an array
             within the fetched response. When set, the response is parsed
-            as JSON instead of HTML; each array element (must be a JSON
-            object) is flattened into a synthetic `<div class="json-item">`
-            element with one data-<key> attribute per scalar field, so
+            as JSON instead of HTML; each array element is flattened into a
+            synthetic `<div class="json-item">` element with one data-<key>
+            attribute per scalar field (a plain value becomes data-value), so
             existing selectors below can read them via text_selection
             type "attributes" as normal.
         json_url_template:
@@ -206,10 +206,20 @@ $defs:
         body:
           type: string
           description:
-            Optional application/x-www-form-urlencoded request body, with
-            {query} substituted (after query_format).
+            Optional request body, with {query} substituted (after
+            query_format). Sent as described by body_format.
           examples:
             - '"action=wp-manga-search-manga&title={query}"'
+            - '''{"q":"{query}","page":1}'''
+        body_format:
+          default: form
+          enum:
+            - form
+            - json
+          description:
+            form sends body as application/x-www-form-urlencoded; json sends
+            it as application/json, with {query} JSON-escaped so it can sit
+            inside a JSON string.
         query_format:
           $ref: 'string_selector.schema.yaml#$defs/cleanup'
         json_array:

@@ -91,6 +91,11 @@ test_manga_mod! {
     fanfox: "https://newm.fanfox.net/manga/spirit_farmer/", ignore = ["chapter_date", "alt_titles"];
 }
 
+test_manga_mod! {
+    roliascan,
+    roliascan: "https://roliascan.com/manga/level-up-with-the-gods/";
+}
+
 /// Ignored may be
 /// - genres
 /// - authors

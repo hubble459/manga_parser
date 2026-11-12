@@ -420,9 +420,10 @@ When `json_array` is set, the fetched response is parsed as **JSON instead
 of HTML**. The engine navigates to that path (an
 [RFC 6901 JSON Pointer](https://datatracker.ietf.org/doc/html/rfc6901) —
 `/data/chapters` means "the `chapters` array inside the top-level `data`
-object") and requires it to resolve to an array. Each array element (must
-itself be a JSON object; non-object elements are skipped) is flattened into
-a synthetic element:
+object") and requires it to resolve to an array. Each object in the array
+is flattened into a synthetic element (a plain value, such as the URLs in
+`{"images": ["https://...", ...]}`, becomes `data-value` instead; `null`s
+are skipped):
 
 ```html
 <div class="json-item" data-chapter_num="266" data-chapter_name="Chapter 266" data-chapter_slug="chapter-266" data-updated_at="2025-09-29T23:45:54.000000Z"></div>
@@ -473,6 +474,10 @@ AJAX actions), using the search page's own hostname/URL as the `{host}`/
 read POSTed form fields, so `search` also takes `method: post` and a `body`
 (sent as `application/x-www-form-urlencoded`, with `{query}` substituted
 after `query_format`) — see mangaread.org's entry in `configs/madara.yaml`.
+For a JSON API, set `body_format: json`: the body is sent as
+`application/json` and `{query}` is JSON-escaped, so it can sit inside a
+JSON string (`body: '{"query":"{query}","limit":20}'`, see
+`configs/roliascan.yaml`).
 
 ### `embedded_json` (chapters and images)
 
