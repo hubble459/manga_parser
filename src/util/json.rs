@@ -33,11 +33,7 @@ pub fn flatten_json_array_to_html(
         };
 
         let mut attrs: HashMap<String, String> = HashMap::new();
-        for (key, value) in obj {
-            if let Some(s) = scalar_to_string(value) {
-                attrs.insert(sanitize_key(key), s);
-            }
-        }
+        flatten_object(obj, "", &mut attrs);
 
         if let Some(template) = url_template {
             let mut computed = template.replace("{host}", host).replace("{url}", base_url);
@@ -56,6 +52,21 @@ pub fn flatten_json_array_to_html(
     html.push_str("</body></html>");
 
     Ok(html)
+}
+
+/// One attribute per field. Nested objects are also flattened with dotted
+/// keys (`{"name": {"en": "x"}}` -> `name.en`), on top of the object itself
+/// as a JSON string under its own key. Arrays are only JSON-stringified.
+fn flatten_object(obj: &serde_json::Map<String, Value>, prefix: &str, attrs: &mut HashMap<String, String>) {
+    for (key, value) in obj {
+        let key = format!("{prefix}{}", sanitize_key(key));
+        if let Some(s) = scalar_to_string(value) {
+            attrs.insert(key.clone(), s);
+        }
+        if let Value::Object(nested) = value {
+            flatten_object(nested, &format!("{key}."), attrs);
+        }
+    }
 }
 
 fn scalar_to_string(value: &Value) -> Option<String> {
@@ -121,6 +132,27 @@ mod test {
         let html = flatten_json_array_to_html(&json, "/items", None, "example.com", "https://example.com").unwrap();
 
         assert!(html.contains("data-tags=\"[&quot;a&quot;,&quot;b&quot;]\""));
+    }
+
+    #[test]
+    fn flattens_nested_objects_with_dotted_keys() {
+        let json = json!([{"slug": "x", "name": {"en": "Spirit Farmer", "deep": {"a": 1}}, "alt": [{"n": "y"}]}]);
+
+        let html = flatten_json_array_to_html(&json, "", Some("{url}/{slug}/{name.en}"), "example.com", "https://example.com").unwrap();
+
+        assert!(html.contains("data-name.en=\"Spirit Farmer\""), "{html}");
+        assert!(html.contains("data-name.deep.a=\"1\""), "{html}");
+        // The parent object is still available as JSON, arrays are not expanded.
+        assert!(html.contains("data-name=\"{"), "{html}");
+        assert!(!html.contains("data-alt.0"), "{html}");
+        assert!(html.contains("data-__url=\"https://example.com/x/Spirit Farmer\""), "{html}");
+
+        // Readable by attribute name after HTML parsing (names are lowercased).
+        use kuchiki::traits::TendrilSink;
+        let doc = kuchiki::parse_html().one(html);
+        let item = doc.select_first("div.json-item").unwrap();
+        let attrs = &item.attributes;
+        assert_eq!(attrs.get("data-name.en"), Some("Spirit Farmer"));
     }
 
     #[test]

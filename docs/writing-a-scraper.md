@@ -439,7 +439,10 @@ Flattening rules: strings pass through as-is; numbers/booleans become their
 string form; `null` fields are omitted entirely (so an `attributes` list
 with a fallback will correctly skip past them); nested objects/arrays are
 JSON-stringified rather than silently dropped, in case you ever need to
-regex into them via `cleanup`.
+regex into them via `cleanup`. Nested objects are additionally flattened
+with dotted keys, so `{"name": {"en": "Spirit Farmer"}}` is readable as
+`data-name.en` (and as `{name.en}` in a url template). Arrays are not
+expanded.
 
 **`json_url_template`** exists for APIs (like the one above) that don't
 include a directly usable URL or path for each item — only a slug or ID.
@@ -522,6 +525,7 @@ chapter:
 
 Keep the regex anchored to one object (`[^{}]*?` rather than `.*?`) so a
 match can't run on into the next item. See `configs/vortexscans.yaml`.
+
 ## The `images` block
 
 ```yaml

@@ -85,5 +85,45 @@ images:
           - data-image
       text_split_regex: null
 
+# The site's own search API (what its frontend calls): a top-level JSON array
+# of books, with the title in a nested `name` object.
+search:
+  - hostnames:
+      - asurascans.my
+    search_url: "https://api.asurascans.my/v2/books?search={query}"
+    query_format:
+      - replace_regex: '\+'
+        replace_with: "%2B"
+      - replace_regex: "&"
+        replace_with: "%26"
+      - replace_regex: " "
+        replace_with: "+"
+    json_array: ""
+    json_url_template: "https://asurascans.my/content/{slug}"
+    selectors:
+      base: div.json-item
+      url:
+        selector: div.json-item
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - data-__url
+      title:
+        selector: div.json-item
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - data-name.en
+              - data-name.original
+      cover_url:
+        selector: div.json-item
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - data-poster
+
 date_formats:
   - "%Y-%m-%dT%H:%M:%S%.fZ"
