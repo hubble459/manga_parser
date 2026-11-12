@@ -21,6 +21,11 @@ pub struct ArraySelectorOptions {
     /// eg. "martial arts, shonen, school" should be splitted on ', '
     #[serde(default = "default_text_split_regex", deserialize_with = "serde_regex::deserialize")]
     pub text_split_regex: Option<Regex>,
+    /// Drop repeated items, keeping the first occurrence -- for pages that
+    /// list the same value more than once (e.g. one person as both author
+    /// and artist).
+    #[serde(default)]
+    pub unique: bool,
 }
 
 fn default_text_split_regex() -> Option<Regex> {
@@ -34,6 +39,7 @@ impl Default for ArraySelectorOptions {
             text_selection: StringSelection::default(),
             fix_capitalization: FixCapitalization::default(),
             text_split_regex: default_text_split_regex(),
+            unique: false,
         }
     }
 }

@@ -15,6 +15,35 @@ pub struct Chapter {
     pub url: StringSelectors,
     #[serde(default)]
     pub fetch_external: Vec<FetchExternal>,
+    #[serde(default)]
+    pub embedded_json: Option<EmbeddedJson>,
+}
+
+/// Page state embedded in the document itself (a `<script>` holding JSON)
+#[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Deserialize)]
+pub struct EmbeddedJson {
+    /// CSS selector for the element holding the serialized state.
+    pub selector: String,
+    #[serde(default)]
+    pub format: EmbeddedJsonFormat,
+    /// RFC 6901 JSON Pointer to the array within the decoded state (`/` in a
+    /// key is escaped as `~1`).
+    pub array: String,
+    /// Same as `FetchExternal::json_url_template`.
+    #[serde(default)]
+    pub url_template: Option<String>,
+}
+
+#[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Deserialize, Default, Clone, Copy)]
+#[serde(rename_all = "lowercase")]
+pub enum EmbeddedJsonFormat {
+    #[default]
+    Json,
+    /// `application/json+devalue`, as used by Astro and SvelteKit -- see
+    /// `util::devalue`.
+    Devalue,
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]

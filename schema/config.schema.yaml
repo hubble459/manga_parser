@@ -31,6 +31,8 @@ properties:
         $ref: array_selector.schema.yaml
       fetch_external:
         $ref: "#/$defs/fetch_external"
+      embedded_json:
+        $ref: "#/$defs/embedded_json"
   date_formats:
     type: array
     description: Date formats the website uses based on https://docs.rs/chrono/latest/chrono/format/strftime/index.html
@@ -81,6 +83,40 @@ $defs:
         $ref: string_selector.schema.yaml
       fetch_external:
         $ref: "#/$defs/fetch_external"
+      embedded_json:
+        $ref: "#/$defs/embedded_json"
+  embedded_json:
+    type: object
+    description:
+      Page state embedded in the document itself (a <script> holding JSON),
+      for sites whose HTML only renders part of the data. The array at
+      `array` is flattened into synthetic <div class="json-item"> elements
+      exactly like fetch_external's json_array, and the selectors then run
+      against those.
+    required:
+      - selector
+      - array
+    properties:
+      selector:
+        type: string
+        description: CSS selector for the element holding the serialized state
+        examples:
+          - script#it-astro-state
+      format:
+        default: json
+        enum:
+          - json
+          - devalue
+        description:
+          devalue is application/json+devalue, as used by Astro and SvelteKit
+      array:
+        type: string
+        description:
+          RFC 6901 JSON Pointer to the array within the decoded state ("/"
+          in a key is escaped as "~1")
+      url_template:
+        type: string
+        description: Same as fetch_external's json_url_template
   fetch_external:
     type: array
     items:

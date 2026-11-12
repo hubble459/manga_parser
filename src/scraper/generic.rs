@@ -10,7 +10,7 @@ use reqwest::{Body, Method, StatusCode, Url};
 use crate::{
     config::{
         array_selector::ArraySelectors,
-        chapter::FetchExternal,
+        chapter::{EmbeddedJson, EmbeddedJsonFormat, FetchExternal},
         string_selector::StringSelectors,
         string_selector_options::{self, StringSelection},
         MangaScraperConfig,
@@ -181,6 +181,10 @@ impl GenericScraper {
                 }
             }
 
+            if selector.options.unique {
+                let mut seen = std::collections::HashSet::new();
+                items.retain(|item| seen.insert(item.clone()));
+            }
             if !items.is_empty() {
                 return Ok(items);
             }
@@ -347,6 +351,10 @@ impl GenericScraper {
         let chapter_config = &config.manga.chapter;
 
         let doc = self.fetch_external(url, doc, &chapter_config.fetch_external).await?;
+        let doc = match &chapter_config.embedded_json {
+            Some(embedded) => embedded_json_doc(url, &doc, embedded)?,
+            None => doc,
+        };
 
         let elements = {
             let mut elements = None;
@@ -404,6 +412,10 @@ impl GenericScraper {
         debug!("[images] parsing images for {}", url.as_str());
 
         let doc = self.fetch_external(&url, doc, &config.images.fetch_external).await?;
+        let doc = match &config.images.embedded_json {
+            Some(embedded) => embedded_json_doc(&url, &doc, embedded)?,
+            None => doc,
+        };
 
         let images = self.select_string_array(&config.images.image_selector, doc)?;
         debug!("[images] found {} images", images.len());
@@ -660,6 +672,28 @@ impl MangaScraper for GenericScraper {
     fn search_accepts(&self, hostname: &str) -> bool {
         self.searchable_hostnames().binary_search(&hostname.to_string()).is_ok()
     }
+}
+
+/// Decodes the state `embedded` points at and flattens its array into a
+/// synthetic document of `div.json-item` elements (see `EmbeddedJson`).
+fn embedded_json_doc(url: &Url, doc: &NodeRef, embedded: &EmbeddedJson) -> Result<NodeRef, ScrapeError> {
+    let element = doc
+        .select_first(&embedded.selector)
+        .map_err(|_| ScrapeError::WebScrapingError(format!("Embedded JSON '{}' not found", embedded.selector)))?;
+    let text = element.text_contents();
+    let json = match embedded.format {
+        EmbeddedJsonFormat::Json => serde_json::from_str(&text)
+            .map_err(|e| ScrapeError::WebScrapingError(format!("Invalid embedded JSON: {e}")))?,
+        EmbeddedJsonFormat::Devalue => crate::util::devalue::parse(&text)?,
+    };
+    let html = crate::util::json::flatten_json_array_to_html(
+        &json,
+        &embedded.array,
+        embedded.url_template.as_deref(),
+        url.host_str().unwrap_or_default(),
+        url.as_str(),
+    )?;
+    html_to_doc(&html)
 }
 
 fn html_to_doc(html: &str) -> Result<NodeRef, ScrapeError> {

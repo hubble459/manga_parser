@@ -84,3 +84,7 @@ $defs:
           text_split_regex:
             type: ['string', 'null']
             description: Should strings be split to become an array
+          unique:
+            type: boolean
+            default: false
+            description: Drop repeated items, keeping the first occurrence

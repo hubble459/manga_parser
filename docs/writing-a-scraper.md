@@ -262,6 +262,19 @@ array item (most `image_selector`s do this); otherwise the default regex
 runs against each item's text too, usually harmlessly, but can misfire on
 image URLs containing `-`.
 
+### `unique` (array selectors only)
+
+Drops repeated items, keeping the first occurrence. Off by default. Useful
+when a page lists the same value more than once, e.g. one person as both
+author and artist:
+
+```yaml
+authors:
+  selector: "h6:contains(Author) + div a[href^='/person/']"
+  options:
+    unique: true
+```
+
 ## The `manga` block
 
 ```yaml
@@ -457,6 +470,39 @@ AJAX actions), using the search page's own hostname/URL as the `{host}`/
 read POSTed form fields, so `search` also takes `method: post` and a `body`
 (sent as `application/x-www-form-urlencoded`, with `{query}` substituted
 after `query_format`) — see mangaread.org's entry in `configs/madara.yaml`.
+
+### `embedded_json` (chapters and images)
+
+Some sites render only part of their data as HTML and ship the rest as page
+state in a `<script>` — e.g. asurascans.my server-renders the newest ~47
+chapters but embeds all of them (and every page image of a chapter) in
+Astro's `<script id="it-astro-state" type="application/json+devalue">`.
+`embedded_json` reads that state from the page that was already fetched (no
+extra request), flattens the array at `array` into `div.json-item` elements
+exactly like `json_array` above, and the selectors run against those:
+
+```yaml
+chapter:
+  embedded_json:
+    selector: script#it-astro-state     # element holding the state
+    format: devalue                     # json (default) or devalue
+    array: /@inox-tools~1request-nanostores/current-book-chapters
+    url_template: "{url}/{id}"          # optional, like json_url_template
+  base: div.json-item
+  title:
+    selector: div.json-item
+    options:
+      text_selection:
+        type: attributes
+        attributes: [data-title, data-number]
+```
+
+`array` is an RFC 6901 JSON Pointer, so a `/` inside a key is written `~1`.
+`devalue` is the format Astro and SvelteKit use: a flat array where integers
+inside objects/arrays reference other elements (`src/util/devalue.rs`
+decodes it into plain JSON). HTML attribute names are lowercased, so a
+`createdAt` field is read as `data-createdat`. See
+`configs/asurascans-my.yaml` for the full example.
 
 ## The `images` block
 
