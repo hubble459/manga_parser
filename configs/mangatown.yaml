@@ -87,13 +87,22 @@ images:
           - value
       text_split_regex: null
   image_selector:
-    selector: div#viewer img#image
-    options:
-      text_selection:
-        type: attributes
-        attributes:
-          - src
-      text_split_regex: null
+    - selector: div#viewer img#image
+      options:
+        text_selection:
+          type: attributes
+          attributes:
+            - src
+        text_split_regex: null
+    # Long-strip (webtoon) series put every page on the one chapter page as
+    # img.image, without the page dropdown or img#image.
+    - selector: div#viewer img.image
+      options:
+        text_selection:
+          type: attributes
+          attributes:
+            - src
+        text_split_regex: null
 
 search:
   - hostnames:
