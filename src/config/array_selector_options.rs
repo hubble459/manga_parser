@@ -28,8 +28,10 @@ pub struct ArraySelectorOptions {
     pub unique: bool,
 }
 
+/// Splits on `,` `;` `|`, and on a dash only with spaces around it, so hyphenated values
+/// ("Sci-Fi", "4-Koma", "Jae-Hoon") stay whole.
 fn default_text_split_regex() -> Option<Regex> {
-    Regex::new(r" *[,;\-|]+ *").ok()
+    Regex::new(r" *[,;|]+ *| +[-–] +").ok()
 }
 
 impl Default for ArraySelectorOptions {
@@ -41,5 +43,19 @@ impl Default for ArraySelectorOptions {
             text_split_regex: default_text_split_regex(),
             unique: false,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::default_text_split_regex;
+
+    #[test]
+    fn default_split_keeps_hyphenated_values() {
+        let regex = default_text_split_regex().unwrap();
+        let split = |text: &str| regex.split(text).map(str::to_string).collect::<Vec<_>>();
+        assert_eq!(split("Action, Sci-Fi; 4-Koma | Drama"), ["Action", "Sci-Fi", "4-Koma", "Drama"]);
+        assert_eq!(split("Kim Jae-Hoon - Lee Min"), ["Kim Jae-Hoon", "Lee Min"]);
+        assert_eq!(split("martial arts,shonen ,school"), ["martial arts", "shonen", "school"]);
     }
 }
