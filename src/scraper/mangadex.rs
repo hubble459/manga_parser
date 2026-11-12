@@ -17,6 +17,16 @@ use crate::model::*;
 
 use super::MangaScraper;
 
+/// Every mangadex manga is stored under its website url, whichever form it was found by,
+/// so one manga has one url and one hostname.
+const HOSTNAME: &str = "mangadex.org";
+/// Hostnames whose manga urls this scraper accepts.
+const ACCEPTED_HOSTNAMES: [&str; 2] = ["api.mangadex.org", "mangadex.org"];
+
+fn manga_url(id: &uuid::Uuid) -> Url {
+    Url::parse(&format!("https://{HOSTNAME}/title/{id}")).unwrap()
+}
+
 pub struct MangaDex {
     client: MangaDexClient,
 }
@@ -162,7 +172,7 @@ impl MangaScraper for MangaDex {
             .collect();
 
         Ok(Manga {
-            url: url.clone(),
+            url: manga_url(uuid),
             cover_url: cover,
             title: manga
                 .attributes
@@ -310,7 +320,7 @@ impl MangaScraper for MangaDex {
                             panic!();
                         }
                     }),
-                url: Url::parse(&format!("{}/manga/{}", mangadex_api::API_URL, m.id)).unwrap(),
+                url: manga_url(&m.id),
             })
             .collect();
 
@@ -319,15 +329,11 @@ impl MangaScraper for MangaDex {
 
     async fn accepts(&self, url: &Url) -> bool {
         let hostname = url.host_str();
-        if let Some(hostname) = hostname {
-            self.searchable_hostnames().binary_search(&hostname.to_string()).is_ok()
-        } else {
-            false
-        }
+        hostname.is_some_and(|hostname| ACCEPTED_HOSTNAMES.contains(&hostname))
     }
 
     fn searchable_hostnames(&self) -> Vec<String> {
-        vec!["api.mangadex.org".to_string(), "mangadex.org".to_string()]
+        vec![HOSTNAME.to_string()]
     }
 
     fn search_accepts(&self, hostname: &str) -> bool {
