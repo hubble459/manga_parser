@@ -1,0 +1,89 @@
+# yaml-language-server: $schema=../schema/config.schema.yaml
+name: asurascans-my
+
+accept:
+  hostnames:
+    - asurascans.my
+
+manga:
+  title: h1
+  description:
+    selector: h6:contains(Description) + p
+    options:
+      cleanup:
+        - replace_regex: '\[video[^\]]*\]\s*\[/video\]'
+          replace_with: ""
+  cover_url:
+    selector: "meta[name='og:image']"
+    options:
+      text_selection:
+        type: attributes
+        attributes:
+          - content
+  # The page renders this block twice (mobile + desktop layouts).
+  status: "div:not([class]) > a[href*='status=']"
+  # Each person is listed once per role (author and artist).
+  authors:
+    selector: "h6:contains(Author) + div a[href^='/person/']"
+    options:
+      unique: true
+  genres: "a[href*='labelsInclude=']"
+
+  # The page only renders the newest few dozen chapters; the full list lives
+  # in the Astro page state.
+  chapter:
+    embedded_json:
+      selector: script#it-astro-state
+      format: devalue
+      array: /@inox-tools~1request-nanostores/current-book-chapters
+      url_template: "{url}/{id}"
+    base: div.json-item
+    title:
+      - selector: div.json-item
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - data-title
+              - data-name
+              - data-number
+    number:
+      selector: div.json-item
+      options:
+        text_selection:
+          type: attributes
+          attributes:
+            - data-number
+    date:
+      selector: div.json-item
+      options:
+        text_selection:
+          type: attributes
+          attributes:
+            - data-createdat
+    url:
+      selector: div.json-item
+      options:
+        text_selection:
+          type: attributes
+          attributes:
+            - data-__url
+
+images:
+  # Only the first couple of pages are real <img>s; all of them are in the
+  # Astro page state, in reading order.
+  embedded_json:
+    selector: script#it-astro-state
+    format: devalue
+    array: /@inox-tools~1request-nanostores/reader-current-chapter/pages
+  image_selector:
+    selector: div.json-item
+    options:
+      text_selection:
+        type: attributes
+        attributes:
+          - data-image
+      text_split_regex: null
+
+date_formats:
+  - "%Y-%m-%dT%H:%M:%S%.fZ"
