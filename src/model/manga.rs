@@ -19,5 +19,8 @@ pub struct Manga {
     /// 18+: an adult-only site (config `nsfw: true`) or a manga the site rates as adult.
     #[builder(default)]
     pub nsfw: bool,
+    /// The language the manga was first published in (e.g. `ko`, `ja`, `zh`), when the site
+    /// says.
+    pub original_language: Option<String>,
     pub chapters: Vec<Chapter>,
 }

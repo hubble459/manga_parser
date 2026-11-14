@@ -214,6 +214,7 @@ impl MangaScraper for MangaDex {
                 .filter(|a| a.is_some())
                 .map(|a| a.unwrap().to_owned())
                 .collect(),
+            original_language: Some(manga.attributes.original_language.code2().to_string()),
             nsfw: matches!(
                 manga.attributes.content_rating,
                 Some(ContentRating::Erotica | ContentRating::Pornographic)
