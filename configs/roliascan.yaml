@@ -50,6 +50,10 @@ manga:
         regex: (?<id>\d+)
         url: /auth/manga-chapters?manga_id={id}&offset=0&limit=500&order=DESC
         json_array: /chapters
+        # The API returns at most 500 chapters per request.
+        json_pagination:
+          offset_param: offset
+          has_more: /has_more
     base: div.json-item
     title:
       selector: div.json-item

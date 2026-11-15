@@ -74,6 +74,16 @@ async fn kakamanga_follows_chapter_pagination() -> Result<(), ScrapeError> {
     Ok(())
 }
 
+/// roliascan's chapter API pages its results (at most 500 per request).
+#[test_log::test(tokio::test)]
+async fn roliascan_follows_chapter_pagination() -> Result<(), ScrapeError> {
+    let url = reqwest::Url::parse("https://roliascan.com/manga/martial-peak/").unwrap();
+    let manga = SCRAPER_MANAGER.manga(&url).await?;
+    assert!(manga.chapters.len() > 500, "Only {} chapters", manga.chapters.len());
+    assert!(manga.chapters.iter().any(|chapter| chapter.number == 1.0), "Missing chapter 1");
+    Ok(())
+}
+
 test_manga_mod! {
     weebcentral,
     weebcentral: "https://weebcentral.com/series/01K8B4TXH0C9WXKXN13NGXM9G1/last-boss-toubatsugo-ni-hajimeru-nishuume-boukensha-life";
