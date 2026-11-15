@@ -27,6 +27,8 @@ lazy_static::lazy_static! {
         ClientBuilder::new(
             reqwest::ClientBuilder::default()
                 .cookie_provider(COOKIE_JAR.clone())
+                // Fail fast on unreachable hosts; requests set their own overall timeout.
+                .connect_timeout(std::time::Duration::from_secs(5))
                 .build()
                 .unwrap()
         )

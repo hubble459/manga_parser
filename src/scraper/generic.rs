@@ -800,7 +800,9 @@ async fn fetch_text(
         .request(method, url.clone())
         .header("Referer", url.to_string())
         .header("Origin", url.to_string())
-        .timeout(Duration::from_secs(5));
+        // Covers reading the body too: roliascan's ~900 KB chapter pages,
+        // stored by the cache middleware, can take over 5 s on a busy host.
+        .timeout(Duration::from_secs(30));
     if let Some(cache_mode) = cache_mode {
         request = request.with_extension(cache_mode);
     }
