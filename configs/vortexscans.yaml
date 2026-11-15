@@ -26,6 +26,10 @@ manga:
   alt_titles:
     selector: div.invisible[aria-hidden='true'] + div
     options:
+      # Some series list the names of the Korean language instead of titles.
+      cleanup:
+        - replace_regex: '(한국어 \(韓國語\)|조선말 \(朝鮮語\))(, )?'
+          replace_with: ""
       text_split_regex: '\s*\n\s*|, |\s+/\s+'
       unique: true
 

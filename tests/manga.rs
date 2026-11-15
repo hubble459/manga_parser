@@ -84,6 +84,31 @@ async fn roliascan_follows_chapter_pagination() -> Result<(), ScrapeError> {
     Ok(())
 }
 
+/// asurascans.my only serves chapter images through the reader's resize preset.
+#[test_log::test(tokio::test)]
+async fn asurascans_my_chapter_images_load() -> Result<(), ScrapeError> {
+    let url = reqwest::Url::parse(
+        "https://asurascans.my/content/max-level-player/abd5ef00-037d-4299-bc0c-9eb323ff7208",
+    )
+    .unwrap();
+    let images = SCRAPER_MANAGER.chapter_images(&url).await?;
+    assert_eq!(images.len(), 25);
+    let response = reqwest::get(images[0].clone()).await.unwrap();
+    assert!(response.status().is_success(), "{} gave {}", images[0], response.status());
+    Ok(())
+}
+
+/// Some vortexscans series list the Korean language's names as alt titles.
+#[test_log::test(tokio::test)]
+async fn vortexscans_drops_language_alt_titles() -> Result<(), ScrapeError> {
+    let url = reqwest::Url::parse("https://vortexscans.org/series/reality-quest-2").unwrap();
+    let manga = SCRAPER_MANAGER.manga(&url).await?;
+    for title in &manga.alternative_titles {
+        assert!(!title.contains("韓國語") && !title.contains("朝鮮語"), "Language as alt title: {title:?}");
+    }
+    Ok(())
+}
+
 test_manga_mod! {
     weebcentral,
     weebcentral: "https://weebcentral.com/series/01K8B4TXH0C9WXKXN13NGXM9G1/last-boss-toubatsugo-ni-hajimeru-nishuume-boukensha-life";

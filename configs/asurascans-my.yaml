@@ -83,6 +83,10 @@ images:
         type: attributes
         attributes:
           - data-image
+      # Originals 404; only the reader's own resize preset is served.
+      cleanup:
+        - replace_regex: '^([^?]+)(\?.*)?$'
+          replace_with: "${1}?width=700&type=jpeg&quality=75"
       text_split_regex: null
 
 # The site's own search API (what its frontend calls): a top-level JSON array
