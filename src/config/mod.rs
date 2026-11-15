@@ -25,6 +25,10 @@ pub struct MangaScraperConfig {
     /// An adult-only site: every manga scraped with this config is marked `nsfw`.
     #[serde(default)]
     pub nsfw: bool,
+    /// `name=value` cookies sent to every hostname in `accept.hostnames`,
+    /// e.g. a site's "I'm an adult" confirmation.
+    #[serde(default)]
+    pub cookies: Vec<String>,
 }
 
 #[cfg(test)]

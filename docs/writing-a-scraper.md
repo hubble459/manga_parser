@@ -93,6 +93,19 @@ ignored (surfaced together only if every config fails). This means:
   needs to be broad enough to catch real matches for its own selectors to
   then work.
 
+## `cookies`
+
+```yaml
+cookies:
+  - isAdult=1
+```
+
+Cookies sent with every request to the hostnames in `accept.hostnames` (not
+to sites only matched by `accept.selectors`). Use this for gates a site
+lifts with a cookie, like fanfox's adult confirmation page. It's a list of
+`name=value` strings rather than a map because the config loader lowercases
+map keys.
+
 ## Selector engine
 
 Selectors are standard CSS (via a `kuchiki` fork with the `selectors`

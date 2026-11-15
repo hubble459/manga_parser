@@ -109,6 +109,16 @@ async fn vortexscans_drops_language_alt_titles() -> Result<(), ScrapeError> {
     Ok(())
 }
 
+/// Some fanfox pages are an adult confirmation page without the isAdult cookie.
+#[test_log::test(tokio::test)]
+async fn fanfox_passes_adult_gate() -> Result<(), ScrapeError> {
+    let url = reqwest::Url::parse("https://newm.fanfox.net/manga/shokushuhime/").unwrap();
+    let manga = SCRAPER_MANAGER.manga(&url).await?;
+    assert_eq!(manga.title, "Shokushuhime");
+    assert!(!manga.chapters.is_empty(), "Missing chapters");
+    Ok(())
+}
+
 test_manga_mod! {
     weebcentral,
     weebcentral: "https://weebcentral.com/series/01K8B4TXH0C9WXKXN13NGXM9G1/last-boss-toubatsugo-ni-hajimeru-nishuume-boukensha-life";

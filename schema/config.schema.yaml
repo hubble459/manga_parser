@@ -13,6 +13,16 @@ properties:
     type: boolean
     description: An adult-only website; every manga scraped from it is marked 18+
     default: false
+  cookies:
+    type: array
+    description:
+      name=value cookies sent to every hostname in accept.hostnames, e.g. a
+      site's "I'm an adult" confirmation. A list rather than a map, because
+      config keys are lowercased.
+    items:
+      type: string
+    examples:
+      - [isAdult=1]
   accept:
     type: object
     properties:

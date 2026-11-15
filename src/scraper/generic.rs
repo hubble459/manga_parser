@@ -51,6 +51,7 @@ impl GenericScraper {
                     .add_source(File::from_str(contents, FileFormat::Yaml))
                     .build()?;
                 let manga_config = config.try_deserialize::<MangaScraperConfig>()?;
+                seed_cookies(&manga_config);
 
                 configs.push(manga_config);
             }
@@ -842,6 +843,18 @@ async fn fetch_json_config(
     let json = serde_json::from_str(&text)
         .map_err(|e| ScrapeError::WebScrapingError(format!("Failed to parse response as JSON: {e}")))?;
     Ok((json, url))
+}
+
+/// Put a config's `cookies` in the client's cookie store for its hostnames.
+fn seed_cookies(config: &MangaScraperConfig) {
+    for hostname in &config.accept.hostnames {
+        let Ok(url) = Url::parse(&format!("https://{hostname}/")) else {
+            continue;
+        };
+        for cookie in &config.cookies {
+            crate::COOKIE_JAR.add_cookie_str(cookie, &url);
+        }
+    }
 }
 
 /// Upper bound on pages fetched for one paginated `fetch_external`.

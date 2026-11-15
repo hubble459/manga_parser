@@ -17,13 +17,16 @@ pub mod util;
 lazy_static::lazy_static! {
     static ref USER_AGENT: &'static str = fake_user_agent::get_chrome_rua();
 
+    /// The client's cookie store, seeded with each config's `cookies`.
+    pub static ref COOKIE_JAR: std::sync::Arc<reqwest::cookie::Jar> = Default::default();
+
     pub static ref HTTP_CLIENT: ClientWithMiddleware = {
         // Retry up to 3 times with increasing intervals between attempts.
         let retry_policy = ExponentialBackoff::builder()
             .build_with_max_retries(3);
         ClientBuilder::new(
             reqwest::ClientBuilder::default()
-                .cookie_store(true)
+                .cookie_provider(COOKIE_JAR.clone())
                 .build()
                 .unwrap()
         )
