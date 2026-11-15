@@ -335,7 +335,7 @@ impl GenericScraper {
                             _ => Method::GET,
                         };
                         doc = if let Some(json_array) = &ext_fetch.json_array {
-                            let (json, ..) = fetch_json_pages(&chapter_url, method, json_array, ext_fetch).await?;
+                            let json = fetch_json_pages(&chapter_url, method, json_array, ext_fetch).await?;
                             let html = crate::util::json::flatten_json_array_to_html(
                                 &json,
                                 "",
@@ -854,30 +854,38 @@ async fn fetch_json_pages(
     method: Method,
     json_array: &str,
     ext_fetch: &FetchExternal,
-) -> Result<(serde_json::Value, Url), ScrapeError> {
+) -> Result<serde_json::Value, ScrapeError> {
     let mut items: Vec<serde_json::Value> = Vec::new();
     let mut page_url = url.clone();
-    let mut final_url = url.clone();
-    for _ in 0..MAX_JSON_PAGES {
-        let (json, response_url) = fetch_json_config(&page_url, method.clone(), None).await?;
-        final_url = response_url;
+    let mut previous_first: Option<serde_json::Value> = None;
+    for page_index in 0.. {
+        if page_index == MAX_JSON_PAGES {
+            warn!("[external] Stopped after {MAX_JSON_PAGES} pages of {url}; the list may be incomplete");
+            break;
+        }
+        let (json, ..) = fetch_json_config(&page_url, method.clone(), None).await?;
         let page = json.pointer(json_array).and_then(serde_json::Value::as_array).ok_or_else(|| {
             ScrapeError::WebScrapingError(format!("JSON path '{json_array}' not found or not an array"))
         })?;
-        let page_len = page.len();
+        // An API that ignores the offset would hand back the same page forever.
+        if previous_first.is_some() && page.first() == previous_first.as_ref() {
+            warn!("[external] {page_url} repeated the previous page; does the API take the offset?");
+            break;
+        }
+        previous_first = page.first().cloned();
         items.extend(page.iter().cloned());
 
         let Some(pagination) = &ext_fetch.json_pagination else {
             break;
         };
         let has_more = json.pointer(&pagination.has_more).and_then(serde_json::Value::as_bool);
-        if has_more != Some(true) || page_len == 0 {
+        if has_more != Some(true) || page.is_empty() {
             break;
         }
         page_url = with_query_param(url, &pagination.offset_param, &items.len().to_string());
         debug!("[external] Fetching next page {}", page_url);
     }
-    Ok((serde_json::Value::Array(items), final_url))
+    Ok(serde_json::Value::Array(items))
 }
 
 /// `url` with query parameter `key` set to `value`, replacing any existing one.

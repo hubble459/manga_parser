@@ -38,7 +38,9 @@ manga:
       cleanup:
         - replace_regex: '^Author\(s\)\s*:\s*'
           replace_with: ""
-      text_split_regex: ","
+        # The site's placeholder for a missing author.
+        - replace_regex: '^Unknown$'
+          replace_with: ""
       fix_capitalization: title
   genres:
     selector: td:has('i.info-author') + td a, ul.manga-info-text li.genres a
