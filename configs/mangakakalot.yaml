@@ -5,6 +5,8 @@ accept:
   hostnames:
     - mangakakalot.gg
     - www.mangakakalot.gg
+    - kakamanga.com
+    - www.kakamanga.com
 
 manga:
   title:
@@ -52,23 +54,64 @@ manga:
       fix_capitalization: title
 
   chapter:
-    base: ul.row-content-chapter li, div.chapter-list div.row
-    title: a
+    base:
+      - ul.row-content-chapter li, div.chapter-list div.row
+      - div.json-item
+    title:
+      - a
+      - selector: div.json-item
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - data-chapter_name
     url:
-      selector: a
-      options:
-        text_selection:
-          type: attributes
-          attributes:
-            - href
-            - src
+      - selector: a
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - href
+              - src
+      - selector: div.json-item
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - data-__url
+    number:
+      - selector: div.json-item
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - data-chapter_num
     date:
-      selector: span:last-child
-      options:
-        text_selection:
-          type: attributes
-          attributes:
-            - title
+      - selector: span:last-child
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - title
+      - selector: div.json-item
+        options:
+          text_selection:
+            type: attributes
+            attributes:
+              - data-updated_at
+    # The chapter list is loaded by JS from a JSON API keyed by the manga's slug.
+    fetch_external:
+      - id:
+          selector: "#chapter-list-container"
+          options:
+            text_selection:
+              type: attributes
+              attributes:
+                - data-comic-slug
+        regex: "(?<id>.+)"
+        url: /api/manga/{id}/chapters
+        json_array: /data/chapters
+        json_url_template: "{url}/{chapter_slug}"
 images:
   image_selector:
     selector: div.container-chapter-reader img
@@ -83,7 +126,11 @@ images:
 search:
   - hostnames:
       - www.mangakakalot.gg
-    search_url: "{hostname}/search/story/{query}"
+      - kakamanga.com
+      - www.kakamanga.com
+    # /search/story/{query} sits behind a Cloudflare challenge; the live-search
+    # endpoint renders the same results page without one.
+    search_url: "{hostname}/home/search/json?searchword={query}"
     query_format:
       - replace_regex: " "
         replace_with: "_"

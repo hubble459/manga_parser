@@ -57,7 +57,7 @@ test_manga_mod! {
 
 test_manga_mod! {
     mangakakalot,
-    #[ignore = "CloudflareIUAM"] mangakakalot: "https://www.mangakakalot.gg/manga/after-improperly-licking-a-dog-i-became-a-billionaire", ignore = ["alt_titles"];
+    kakamanga: "https://www.kakamanga.com/manga/skip-and-loafer", ignore = ["alt_titles"];
 }
 
 test_manga_mod! {
