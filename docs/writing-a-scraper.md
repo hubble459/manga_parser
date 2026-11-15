@@ -467,6 +467,26 @@ replaced by the JSON-flattening step will ever match `div.json-item`. See
 needs this; every other Madara-family site keeps working off the first
 alternative in each list, untouched).
 
+**`json_pagination`** handles APIs that return the array a page at a time
+(`{"data": {"chapters": [...], "pagination": {"has_more": true}}}`). The
+request is repeated with the `offset_param` query parameter set to the
+number of items fetched so far, for as long as the boolean at the `has_more`
+JSON Pointer is true, and all pages are flattened together (capped at 100
+pages). Put a page size in `url` if the API takes one, to need fewer
+requests:
+
+```yaml
+fetch_external:
+  - id: ...
+    url: /api/manga/{id}/chapters?limit=500
+    json_array: /data/chapters
+    json_pagination:
+      offset_param: offset
+      has_more: /data/pagination/has_more
+```
+
+See `configs/mangakakalot.yaml`.
+
 `search` supports the identical `json_array`/`json_url_template` pair for
 JSON-backed search endpoints (a common pattern for WordPress "live search"
 AJAX actions), using the search page's own hostname/URL as the `{host}`/

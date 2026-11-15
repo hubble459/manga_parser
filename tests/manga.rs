@@ -60,6 +60,20 @@ test_manga_mod! {
     kakamanga: "https://www.kakamanga.com/manga/skip-and-loafer", ignore = ["alt_titles"];
 }
 
+/// kakamanga's chapter API pages its results (at most 999 per request).
+#[test_log::test(tokio::test)]
+async fn kakamanga_follows_chapter_pagination() -> Result<(), ScrapeError> {
+    let url = reqwest::Url::parse("https://www.kakamanga.com/manga/one-piece").unwrap();
+    let manga = SCRAPER_MANAGER.manga(&url).await?;
+    assert!(manga.chapters.len() > 999, "Only {} chapters", manga.chapters.len());
+    assert!(manga.chapters.iter().any(|chapter| chapter.number == 1.0), "Missing chapter 1");
+    assert!(!manga.authors.is_empty(), "Missing authors");
+    for author in &manga.authors {
+        assert!(!author.contains(':'), "Author still has its label: {author:?}");
+    }
+    Ok(())
+}
+
 test_manga_mod! {
     weebcentral,
     weebcentral: "https://weebcentral.com/series/01K8B4TXH0C9WXKXN13NGXM9G1/last-boss-toubatsugo-ni-hajimeru-nishuume-boukensha-life";

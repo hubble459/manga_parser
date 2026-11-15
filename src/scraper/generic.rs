@@ -335,10 +335,10 @@ impl GenericScraper {
                             _ => Method::GET,
                         };
                         doc = if let Some(json_array) = &ext_fetch.json_array {
-                            let (json, ..) = fetch_json_config(&chapter_url, method, None).await?;
+                            let (json, ..) = fetch_json_pages(&chapter_url, method, json_array, ext_fetch).await?;
                             let html = crate::util::json::flatten_json_array_to_html(
                                 &json,
-                                json_array,
+                                "",
                                 ext_fetch.json_url_template.as_deref(),
                                 hostname,
                                 url.as_str(),
@@ -844,6 +844,54 @@ async fn fetch_json_config(
     Ok((json, url))
 }
 
+/// Upper bound on pages fetched for one paginated `fetch_external`.
+const MAX_JSON_PAGES: usize = 100;
+
+/// Fetch the array at `json_array`, following `ext_fetch.json_pagination`
+/// when set, and return every item as one JSON array.
+async fn fetch_json_pages(
+    url: &Url,
+    method: Method,
+    json_array: &str,
+    ext_fetch: &FetchExternal,
+) -> Result<(serde_json::Value, Url), ScrapeError> {
+    let mut items: Vec<serde_json::Value> = Vec::new();
+    let mut page_url = url.clone();
+    let mut final_url = url.clone();
+    for _ in 0..MAX_JSON_PAGES {
+        let (json, response_url) = fetch_json_config(&page_url, method.clone(), None).await?;
+        final_url = response_url;
+        let page = json.pointer(json_array).and_then(serde_json::Value::as_array).ok_or_else(|| {
+            ScrapeError::WebScrapingError(format!("JSON path '{json_array}' not found or not an array"))
+        })?;
+        let page_len = page.len();
+        items.extend(page.iter().cloned());
+
+        let Some(pagination) = &ext_fetch.json_pagination else {
+            break;
+        };
+        let has_more = json.pointer(&pagination.has_more).and_then(serde_json::Value::as_bool);
+        if has_more != Some(true) || page_len == 0 {
+            break;
+        }
+        page_url = with_query_param(url, &pagination.offset_param, &items.len().to_string());
+        debug!("[external] Fetching next page {}", page_url);
+    }
+    Ok((serde_json::Value::Array(items), final_url))
+}
+
+/// `url` with query parameter `key` set to `value`, replacing any existing one.
+fn with_query_param(url: &Url, key: &str, value: &str) -> Url {
+    let pairs: Vec<(String, String)> = url
+        .query_pairs()
+        .filter(|(k, _)| k != key)
+        .map(|(k, v)| (k.into_owned(), v.into_owned()))
+        .collect();
+    let mut url = url.clone();
+    url.query_pairs_mut().clear().extend_pairs(pairs).append_pair(key, value);
+    url
+}
+
 /// Whether a redirect landed on a sign-in page (`/login`, `/account/sign-in`, ...).
 fn is_login_page(url: &Url) -> bool {
     url.path_segments().is_some_and(|mut segments| {
@@ -863,6 +911,17 @@ async fn fetch_doc(url: &Url) -> Result<(NodeRef, Url), ScrapeError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sets_query_param() {
+        let url = Url::parse("https://example.com/api/chapters?limit=500&offset=0").unwrap();
+        assert_eq!(
+            with_query_param(&url, "offset", "500").as_str(),
+            "https://example.com/api/chapters?limit=500&offset=500"
+        );
+        let url = Url::parse("https://example.com/api/chapters").unwrap();
+        assert_eq!(with_query_param(&url, "offset", "50").as_str(), "https://example.com/api/chapters?offset=50");
+    }
 
     #[test]
     fn detects_sign_in_pages() {

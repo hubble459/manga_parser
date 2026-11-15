@@ -36,8 +36,8 @@ manga:
     selector: td:has('i.info-author') + td a, ul.manga-info-text li:nth-child(2)
     options:
       cleanup:
-        - replace_regex: "^Author(s) : "
-          replace_with: " "
+        - replace_regex: '^Author\(s\)\s*:\s*'
+          replace_with: ""
       text_split_regex: ","
       fix_capitalization: title
   genres:
@@ -109,9 +109,13 @@ manga:
               attributes:
                 - data-comic-slug
         regex: "(?<id>.+)"
-        url: /api/manga/{id}/chapters
+        url: /api/manga/{id}/chapters?limit=500
         json_array: /data/chapters
         json_url_template: "{url}/{chapter_slug}"
+        # The API returns at most 999 chapters per request.
+        json_pagination:
+          offset_param: offset
+          has_more: /data/pagination/has_more
 images:
   image_selector:
     selector: div.container-chapter-reader img

@@ -89,6 +89,21 @@ pub struct FetchExternal {
     /// result is exposed as attribute `data-__url`.
     #[serde(default)]
     pub json_url_template: Option<String>,
+    /// Only used together with `json_array`, for APIs that return the array
+    /// a page at a time.
+    #[serde(default)]
+    pub json_pagination: Option<JsonPagination>,
+}
+
+/// Offset pagination for a JSON `fetch_external`: the request is repeated
+/// with `offset_param` set to the number of items fetched so far, for as long
+/// as the boolean at `has_more` is true and a page adds items.
+#[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Deserialize)]
+pub struct JsonPagination {
+    pub offset_param: String,
+    /// RFC 6901 JSON Pointer to a boolean, e.g. "/data/pagination/has_more".
+    pub has_more: String,
 }
 
 fn default_method() -> String {

@@ -184,6 +184,27 @@ $defs:
             using {host}/{url} (same as the url field above) plus
             {<field>} placeholders for this item's own flattened fields.
             The computed result is exposed as attribute data-__url.
+        json_pagination:
+          type: object
+          description:
+            Only used together with json_array, for APIs that return the
+            array a page at a time. The request is repeated with
+            offset_param set to the number of items fetched so far, for as
+            long as the boolean at has_more is true.
+          required:
+            - offset_param
+            - has_more
+          properties:
+            offset_param:
+              type: string
+              description: Query parameter that takes the item offset
+              examples:
+                - offset
+            has_more:
+              type: string
+              description: RFC 6901 JSON Pointer to a boolean that is true while more pages follow
+              examples:
+                - /data/pagination/has_more
   search:
     type: array
     items:
